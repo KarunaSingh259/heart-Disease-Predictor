@@ -210,16 +210,16 @@ with tab4:
 
 
 # ==============================
-# TAB 5 – ECG IMAGE TEST WITH SUGGESTIONS
+# TAB 5 – ECG IMAGE TEST DASHBOARD
 # ==============================
 with tab5:
-    st.header("🫀 ECG Image Diagnosis (ONNX)")
+    st.header("🫀 ECG Image Diagnosis ")
 
     uploaded = st.file_uploader("Upload ECG Image", ["jpg", "png"])
     
     labels = ["Normal", "Myocardial Infarction", "Abnormal Heartbeat", "History of MI"]
 
-    # Suggestions for each class
+    # Health suggestions for each class
     suggestions = {
         "Normal": "✅ ECG is normal. Maintain a healthy lifestyle and regular check-ups.",
         "Myocardial Infarction": "❌ Signs of a heart attack. Consult a cardiologist immediately!",
@@ -228,12 +228,13 @@ with tab5:
     }
 
     if uploaded:
-        # Display image
-        img = Image.open(uploaded).convert("RGB").resize((224, 224))
-        st.image(img, caption="Uploaded ECG", use_column_width=True)
+        # Display the original high-quality image
+        img_original = Image.open(uploaded).convert("RGB")
+        st.image(img_original, caption="Uploaded ECG", use_column_width=True)
 
-        # Preprocess image
-        img_arr = np.array(img).astype(np.float32) / 255.0
+        # Resize image for ONNX model
+        img_resized = img_original.resize((224, 224))
+        img_arr = np.array(img_resized).astype(np.float32) / 255.0
         img_arr = np.transpose(img_arr, (2, 0, 1))
         img_arr = np.expand_dims(img_arr, axis=0)
 
@@ -244,14 +245,38 @@ with tab5:
         eff_class = labels[np.argmax(eff_pred)]
         hyb_class = labels[np.argmax(hyb_pred)]
 
-        # Display predictions
-        st.success(f"EfficientNet Prediction: {eff_class}")
-        st.success(f"Hybrid Model Prediction: {hyb_class}")
+        # ==============================
+        # Colorful prediction boxes
+        # ==============================
+        st.subheader("📋 Model-wise Prediction Results")
 
-        # Display suggestions
-        st.markdown("### 📝 Health Suggestions")
+        for model_name, pred_class in zip(["EfficientNet", "Hybrid Model"], [eff_class, hyb_class]):
+            if pred_class == "Normal":
+                st.markdown(
+                    f"""
+                    <div style='background-color:#228B22; color:white; padding:12px; border-radius:8px; margin-bottom:6px; font-size:16px;'>
+                        ✅ {model_name} → {pred_class}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    f"""
+                    <div style='background-color:#8B0000; color:white; padding:12px; border-radius:8px; margin-bottom:6px; font-size:16px;'>
+                        ❌ {model_name} → {pred_class}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        # ==============================
+        # Health suggestions
+        # ==============================
+        st.subheader("📝 Health Suggestions")
         st.info(f"EfficientNet: {suggestions[eff_class]}")
         st.info(f"Hybrid Model: {suggestions[hyb_class]}")
+
 
 
 
