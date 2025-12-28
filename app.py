@@ -174,46 +174,102 @@ with tab4:
     df = pd.DataFrame(acc.items(), columns=["Model", "Accuracy"])
     st.plotly_chart(px.bar(df, x="Model", y="Accuracy"))
 
-# ================= TAB 5 =================
+# ================= TAB 5 — ECG MODEL =================
 with tab5:
-    st.header("🫀 ECG Diagnosis")
+    st.header("🫀 ECG Image Diagnosis")
 
     @st.cache_resource
     def load_ecg_models():
         device = torch.device("cpu")
+
+        # ---------- EfficientNet ----------
         eff = models.efficientnet_b0(weights=None)
         eff.classifier[1] = nn.Linear(eff.classifier[1].in_features, 4)
-        eff.load_state_dict(torch.load("efficientnet_ecg_model.pth",
-                                       map_location=device),
-                            strict=False)
+
+        eff_ckpt = torch.load(
+            "efficientnet_ecg_model.pth",
+            map_location=device
+        )
+
+        if isinstance(eff_ckpt, dict) and "state_dict" in eff_ckpt:
+            eff.load_state_dict(eff_ckpt["state_dict"], strict=False)
+        else:
+            eff.load_state_dict(eff_ckpt, strict=False)
+
         eff.eval()
 
+        # ---------- Hybrid (ResNet18) ----------
         hyb = models.resnet18(weights=None)
         hyb.fc = nn.Linear(hyb.fc.in_features, 4)
-        hyb.load_state_dict(torch.load("hybrid_ecg_model.pth",
-                                       map_location=device),
-                            strict=False)
+
+        hyb_ckpt = torch.load(
+            "hybrid_ecg_model.pth",
+            map_location=device
+        )
+
+        if isinstance(hyb_ckpt, dict) and "state_dict" in hyb_ckpt:
+            hyb.load_state_dict(hyb_ckpt["state_dict"], strict=False)
+        else:
+            hyb.load_state_dict(hyb_ckpt, strict=False)
+
         hyb.eval()
+
         return eff, hyb
 
+    # -------- LOAD MODELS SAFELY --------
+    ecg_loaded = True
     try:
         eff_model, hyb_model = load_ecg_models()
-        st.success("ECG Models Loaded")
-    except:
-        st.error("ECG models not loaded")
+        st.success("✅ ECG models loaded successfully")
+    except Exception as e:
+        ecg_loaded = False
+        st.warning("⚠️ ECG models not available on this deployment")
+        st.caption(str(e))
+
+    # -------- STOP IF NOT LOADED --------
+    if not ecg_loaded:
+        st.info(
+            "🩺 ECG diagnosis is temporarily disabled.\n\n"
+            "✔️ Heart Disease ML prediction tabs are fully functional.\n"
+            "📌 To enable ECG: ensure .pth files + torch versions are correct."
+        )
         st.stop()
 
+    # -------- PREPROCESS --------
     transform = transforms.Compose([
-        transforms.Resize((224,224)),
-        transforms.ToTensor()
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5],
+                             [0.5, 0.5, 0.5])
     ])
 
-    img = st.file_uploader("Upload ECG Image", type=["jpg","png"])
-    if img:
-        image = Image.open(img).convert("RGB")
-        st.image(image)
-        x = transform(image).unsqueeze(0)
+    uploaded_image = st.file_uploader(
+        "📤 Upload ECG Image",
+        type=["jpg", "png", "jpeg"]
+    )
+
+    class_labels = [
+        "Normal",
+        "Myocardial Infarction",
+        "Abnormal Heartbeat",
+        "History of MI"
+    ]
+
+    if uploaded_image:
+        img = Image.open(uploaded_image).convert("RGB")
+        st.image(img, caption="Uploaded ECG", use_column_width=True)
+
+        x = transform(img).unsqueeze(0)
+
         with torch.no_grad():
-            p1 = torch.argmax(eff_model(x),1).item()
-            p2 = torch.argmax(hyb_model(x),1).item()
-        st.success(f"EfficientNet: {p1} | Hybrid: {p2}")
+            p1 = torch.argmax(eff_model(x), dim=1).item()
+            p2 = torch.argmax(hyb_model(x), dim=1).item()
+
+        st.subheader("🩺 Model Predictions")
+        st.write("EfficientNet:", class_labels[p1])
+        st.write("Hybrid Model:", class_labels[p2])
+
+        if p1 == p2:
+            st.success(f"✅ Final Diagnosis: {class_labels[p1]}")
+        else:
+            st.warning("⚠️ Models disagree — manual review advised")
