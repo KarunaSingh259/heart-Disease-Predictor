@@ -170,7 +170,7 @@ with tab4:
 # TAB 5 – ECG IMAGE TEST
 # ==============================
 with tab5:
-    st.header("🫀 ECG Image Diagnosis (ONNX)")
+    st.header("🫀 ECG Image Diagnosis ")
 
     uploaded = st.file_uploader("Upload ECG Image", ["jpg","png"])
     labels = ["Normal","Myocardial Infarction","Abnormal Heartbeat","History of MI"]
@@ -208,3 +208,4 @@ with tab5:
         st.subheader("📝 Health Suggestions")
         st.info(f"EfficientNet: {suggestions[eff_class]}")
         st.info(f"Hybrid Model: {suggestions[hyb_class]}")
+
