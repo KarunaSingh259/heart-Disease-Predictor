@@ -1,3 +1,4 @@
+import plotly.express as px
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -202,6 +203,7 @@ with tab5:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
+
 
 
 
