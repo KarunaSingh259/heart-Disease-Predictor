@@ -3,11 +3,11 @@ pandas
 numpy
 plotly
 scikit-learn
-torch==2.0.0
-torchvision==0.15.1
+xgboost
 Pillow
 requests
-xgboost
+
+
 
 
 
