@@ -80,7 +80,7 @@ with tabs[0]:
 
     sample = np.array([[age, sex, cp, trestbps, chol, fbs,
                          restecg, thalach, exang, oldpeak,
-                         slope, ca, thal]])
+                         slope,]])
 
     if st.button("Predict"):
         st.session_state["sample"] = sample
@@ -175,4 +175,5 @@ with tabs[4]:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
+
 
