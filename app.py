@@ -148,16 +148,19 @@ with tab3:
 
     if file:
         df = pd.read_csv(file)
+
+        # Drop target column if it exists
         if "HeartDisease" in df.columns:
             df = df.drop("HeartDisease", axis=1)
 
-        model = load_pickle_model("LogisticRegressionmodel.pkl")
+        # Use cached Logistic Regression model
+        model = ml_models.get("Logistic Regression")  # ✅ No need for load_pickle_model
         if model:
             df["Prediction"] = model.predict(df)
-            df["Prediction"] = df["Prediction"].map(
-                {0: "No Disease", 1: "Disease"}
-            )
+            df["Prediction"] = df["Prediction"].map({0: "No Disease", 1: "Disease"})
             st.write(df)
+        else:
+            st.error("Logistic Regression model not loaded!")
 # ==============================
 # TAB 4 – MODEL INFO
 # ==============================
@@ -199,6 +202,7 @@ with tab5:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
+
 
 
 
