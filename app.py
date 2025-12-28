@@ -97,7 +97,7 @@ with tab1:
         st.success("Data saved. Go to Prediction Result tab.")
 
 # ==============================
-# TAB 2 – RESULT (Colorful)
+# TAB 2 – PREDICTION RESULT (DASHBOARD STYLE)
 # ==============================
 with tab2:
     st.header("📊 Prediction Result")
@@ -108,6 +108,7 @@ with tab2:
 
     input_data = st.session_state["data"]
 
+    # Collect predictions from all models
     preds = []
     for name, model in ml_models.items():
         pred = model.predict(input_data)[0]
@@ -117,13 +118,16 @@ with tab2:
         st.error("No predictions available.")
         st.stop()
 
+    # Calculate average risk percentage
     risk = np.mean(preds) * 100
 
-    # Colorful gauge
+    # ==============================
+    # COLORFUL GAUGE
+    # ==============================
     gauge = go.Figure(go.Indicator(
         mode="gauge+number+delta",
         value=risk,
-        title={"text": "Heart Disease Risk (%)", "font": {"size": 24, "color": "darkblue"}},
+        title={"text": "Heart Disease Risk (%)", "font": {"size": 24, "color": "#1f2c56"}},
         gauge={
             "axis": {"range": [0, 100]},
             "bar": {"color": "darkred"},
@@ -142,19 +146,30 @@ with tab2:
     ))
     st.plotly_chart(gauge, use_container_width=True)
 
-    # Colorful individual model table
-    st.subheader("Individual Model Predictions")
-    pred_df = pd.DataFrame({
-        "Model": list(ml_models.keys()),
-        "Prediction": ["Disease" if p == 1 else "No Disease" for p in preds]
-    })
+    # ==============================
+    # MODEL-WISE COLORFUL BOXES
+    # ==============================
+    st.subheader("📋 Model-wise Prediction Results")
 
-    # Apply coloring using Pandas Styler
-    def color_prediction(val):
-        color = "red" if val == "Disease" else "green"
-        return f"color: {color}; font-weight: bold"
-
-    st.table(pred_df.style.applymap(color_prediction, subset=["Prediction"]))
+    for name, pred in zip(ml_models.keys(), preds):
+        if pred == 1:
+            st.markdown(
+                f"""
+                <div style='background-color:#8B0000; color:white; padding:12px; border-radius:8px; margin-bottom:6px; font-size:16px;'>
+                    ❌ {name} → Heart Disease Detected
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                f"""
+                <div style='background-color:#228B22; color:white; padding:12px; border-radius:8px; margin-bottom:6px; font-size:16px;'>
+                    ✅ {name} → No Heart Disease
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 # ==============================
 # TAB 3 – BULK PREDICTION
@@ -219,6 +234,7 @@ with tab5:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
+
 
 
 
