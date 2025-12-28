@@ -101,37 +101,44 @@ with tab1:
 with tab2:
     st.header("📊 Prediction Result")
 
+    # Check if prediction input exists
     if "show" not in st.session_state:
-        st.info("Predict first.")
+        st.info("Please predict first from Tab 1.")
         st.stop()
 
-    models = {
-        "Decision Tree": "decision_tree_model.pkl",
-        "Logistic Regression": "LogisticRegressionmodel.pkl",
-        "Random Forest": "random_forest_model.pkl",
-        "SVM": "svm_model.pkl",
-        "Voting": "voting_classifier_model.pkl"
-    }
+    # Get input data
+    input_data = st.session_state["data"]
 
+    # Collect predictions from all models
     preds = []
-    for name, file in models.items():
-        model = load_pickle_model(file)
-        if model:
-            preds.append(model.predict(st.session_state["data"])[0])
+    for name, model in ml_models.items():
+        pred = model.predict(input_data)[0]
+        preds.append(pred)
 
     if not preds:
         st.error("No predictions available.")
         st.stop()
 
+    # Calculate average risk percentage
     risk = np.mean(preds) * 100
 
+    # Show gauge chart
     gauge = go.Figure(go.Indicator(
         mode="gauge+number",
         value=risk,
         title={"text": "Heart Disease Risk (%)"},
-        gauge={"axis":{"range":[0,100]}}
+        gauge={"axis": {"range": [0, 100]}}
     ))
-    st.plotly_chart(gauge, use_column_width=True)
+    st.plotly_chart(gauge, use_container_width=True)
+
+    # Show individual model predictions
+    st.subheader("Individual Model Predictions")
+    pred_df = pd.DataFrame({
+        "Model": list(ml_models.keys()),
+        "Prediction": ["Disease" if p == 1 else "No Disease" for p in preds]
+    })
+    st.table(pred_df)
+
 # ==============================
 # TAB 3 – BULK PREDICTION
 # ==============================
@@ -192,5 +199,6 @@ with tab5:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
+
 
 
