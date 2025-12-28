@@ -46,9 +46,9 @@ eff_sess, hyb_sess = load_onnx_models()
 # ==============================
 # TABS
 # ==============================
-tabs = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🔮 Predict",
-    "📊 Result",
+    "📊 Prediction Result",
     "📈 Model Comparison",
     "📄 Model Info",
     "🫀 ECG Image Test"
@@ -57,51 +57,65 @@ tabs = st.tabs([
 # ==============================
 # TAB 1 – INPUT
 # ==============================
-with tabs[0]:
-    st.subheader("🔮 Enter Patient Details")
+with tab1:
+    st.header("🔍 Enter Patient Details")
 
     col1, col2 = st.columns(2)
-
     with col1:
         age = st.number_input("Age", 1, 120, 45)
         sex = st.selectbox("Sex", ["Male", "Female"])
-        cp = st.selectbox("Chest Pain Type", [0, 1, 2, 3])
-        trestbps = st.number_input("Resting BP", 80, 200, 120)
-        chol = st.number_input("Cholesterol", 100, 600, 200)
-        fbs = st.selectbox("Fasting Blood Sugar > 120", [0, 1])
-        restecg = st.selectbox("Rest ECG", [0, 1, 2])
-        thalach = st.number_input("Max Heart Rate", 60, 220, 150)
-        exang = st.selectbox("Exercise Angina", [0, 1])
-        oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
-        slope = st.selectbox("Slope", [0, 1, 2])
-       
+        cp = st.selectbox("Chest Pain Type", ["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"])
+        rbp = st.number_input("Resting BP", 0, 300, 120)
+        chol = st.number_input("Cholesterol", 0, 600)
+    with col2:
+        fbs = st.selectbox("Fasting Blood Sugar", ["<=120", ">120"])
+        ecg = st.selectbox("Resting ECG", ["Normal", "ST-T Abnormality", "LVH"])
+        maxhr = st.number_input("Max Heart Rate", 60, 220, 150)
+        angina = st.selectbox("Exercise Angina", ["Yes", "No"])
+        oldpeak = st.number_input("Oldpeak", 0.0, 10.0, 1.0)
+        slope = st.selectbox("ST Slope", ["Up", "Flat", "Down"])
 
-    sex = 1 if sex == "Male" else 0
+    # Convert categorical to numeric
+    input_df = pd.DataFrame({
+        "Age": [age],
+        "Sex": [0 if sex == "Male" else 1],
+        "ChestPainType": [["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"].index(cp)],
+        "RestingBP": [rbp],
+        "Cholesterol": [chol],
+        "FastingBS": [1 if fbs == ">120" else 0],
+        "RestingECG": [["Normal", "ST-T Abnormality", "LVH"].index(ecg)],
+        "MaxHR": [maxhr],
+        "ExerciseAngina": [1 if angina == "Yes" else 0],
+        "Oldpeak": [oldpeak],
+        "ST_Slope": [["Up", "Flat", "Down"].index(slope)]
+    })
 
-    sample = np.array([[age, sex, cp, trestbps, chol, fbs,
-                         restecg, thalach, exang, oldpeak,
-                         slope,]])
-
-    if st.button("Predict"):
-        st.session_state["sample"] = sample
-        st.success("Data saved. Go to Result tab.")
+    if st.button("🔮 Predict Now"):
+        st.session_state["data"] = input_df
+        st.session_state["show"] = True
+        st.success("Data saved. Go to Prediction Result tab.")
 
 # ==============================
 # TAB 2 – RESULT
 # ==============================
-with tabs[1]:
-    st.subheader("📊 Prediction Result")
+with tab2:
+    st.header("📊 Prediction Result")
 
-    if "sample" not in st.session_state:
-        st.warning("Please predict first.")
+    if "show" not in st.session_state or not st.session_state["show"]:
+        st.warning("Please enter patient details and click Predict.")
     else:
-        sample = st.session_state["sample"]
+        sample = st.session_state["data"]
 
-        preds = []
-        for model in ml_models.values():
-            preds.append(model.predict(sample)[0])
+        results = {}
+        for name, model in ml_models.items():
+            try:
+                results[name] = int(model.predict(sample)[0])
+            except Exception as e:
+                results[name] = f"Error: {e}"
 
-        risk = np.mean(preds) * 100
+        risk = np.mean([v for v in results.values() if isinstance(v, (int, float))]) * 100
+
+        st.json(results)
 
         gauge = go.Figure(go.Indicator(
             mode="gauge+number",
@@ -116,47 +130,38 @@ with tabs[1]:
                 ]
             }
         ))
-
         st.plotly_chart(gauge, use_container_width=True)
 
 # ==============================
-# TAB 3 – MODEL COMPARISON (FIXED)
+# TAB 3 – MODEL COMPARISON
 # ==============================
-with tabs[2]:
-    st.subheader("📈 Model Comparison")
-
-    sample = np.array([[45,1,2,120,200,0,1,150,0,2.3,1,0,2]])
-
-    results = {}
-    for name, model in ml_models.items():
-        results[name] = int(model.predict(sample)[0])
-
-    st.json(results)
+with tab3:
+    st.header("📈 Model Comparison")
+    sample = st.session_state.get("data", pd.DataFrame(np.zeros((1,11)), columns=input_df.columns))
+    comparison = {name: int(model.predict(sample)[0]) for name, model in ml_models.items()}
+    st.json(comparison)
 
 # ==============================
-# TAB 4 – INFO
+# TAB 4 – MODEL INFO
 # ==============================
-with tabs[3]:
-    st.subheader("📄 Model Accuracy")
-
+with tab4:
+    st.header("📄 Model Accuracy")
     acc = {
         "Decision Tree": 80.9,
         "Logistic Regression": 85.8,
         "Random Forest": 84.2,
         "SVM": 84.2
     }
-
     df = pd.DataFrame(acc.items(), columns=["Model", "Accuracy"])
     st.bar_chart(df.set_index("Model"))
 
 # ==============================
-# TAB 5 – ECG IMAGE (ONNX)
+# TAB 5 – ECG IMAGE TEST
 # ==============================
-with tabs[4]:
-    st.subheader("🫀 ECG Image Diagnosis (ONNX)")
+with tab5:
+    st.header("🫀 ECG Image Diagnosis (ONNX)")
 
     uploaded = st.file_uploader("Upload ECG Image", ["jpg", "png"])
-
     labels = ["Normal", "Myocardial Infarction", "Abnormal Heartbeat", "History of MI"]
 
     if uploaded:
@@ -175,5 +180,3 @@ with tabs[4]:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
-
-
