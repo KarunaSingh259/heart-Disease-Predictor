@@ -59,7 +59,7 @@ st.sidebar.markdown("Your intelligent cardiac care assistant 💓")
 st.sidebar.header("Built with ML & Deep Health Analytics")
 
 # ================================================================
-# ✅ TABS (Now 4 + ECG placeholder)
+# ✅ TABS
 # ================================================================
 st.title("💖 Heart Disease Prediction System ")
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -67,7 +67,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ================================================================
-# ✅ TAB 1 — PREDICT (INPUT FORM)
+# TAB 1 — PREDICT
 # ================================================================
 with tab1:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -113,7 +113,7 @@ with tab1:
         st.success("✅ Prediction Data Saved! Go to '📊 Prediction Result' tab to view results.")
 
 # ================================================================
-# ✅ TAB 2 — PREDICTION RESULT
+# TAB 2 — PREDICTION RESULT
 # ================================================================
 with tab2:
     st.header("📊 Prediction Result")
@@ -163,7 +163,7 @@ with tab2:
                 st.error(f"❌ {algonames[i]} → Heart Disease Detected")
 
 # ================================================================
-# ✅ TAB 3 — BULK PREDICT
+# TAB 3 — BULK PREDICT
 # ================================================================
 with tab3:
     st.header("📂 Bulk Prediction System")
@@ -189,7 +189,7 @@ with tab3:
         st.info("Please upload a CSV file with correct columns to predict in bulk.")
 
 # ================================================================
-# ✅ TAB 4 — MODEL INFO
+# TAB 4 — MODEL INFO
 # ================================================================
 with tab4:
     st.header("📈 Model Accuracy Overview")
@@ -203,10 +203,12 @@ with tab4:
     fig = px.bar(df, x="Model", y="Accuracy", color="Accuracy", text="Accuracy")
     st.plotly_chart(fig)
 
+# ================================================================
+# TAB 5 — ECG (Dynamic: Cloud safe / Local full)
+# ================================================================
 with tab5:
     st.header("🫀 ECG Image Diagnosis")
 
-    # ---------- CHECK IF TORCH AVAILABLE ----------
     try:
         import torch
         import torch.nn as nn
@@ -218,19 +220,17 @@ with tab5:
 
     if not torch_available:
         st.info(
-            "⚠️ ECG deep learning models cannot run on Streamlit Cloud due to Python 3.13 compatibility issues.\n\n"
-            "✅ Heart Disease ML predictions (Tabs 1-4) are fully functional.\n"
-            "📌 To enable ECG locally: install Python 3.10-3.12, PyTorch, torchvision, and place the .pth files in the project folder."
+            "⚠️ ECG deep learning models cannot run on Streamlit Cloud (Python 3.13).\n"
+            "✅ Heart Disease ML predictions (Tabs 1-4) fully functional.\n"
+            "📌 To enable ECG locally: install Python 3.10-3.12, PyTorch, torchvision, and place .pth files in project folder."
         )
     else:
         st.success("✅ PyTorch detected — ECG models enabled")
         
-        # ---------- LOAD MODELS ----------
         @st.cache_resource
         def load_ecg_models():
             device = torch.device("cpu")
 
-            # EfficientNet
             eff_model = models.efficientnet_b0(weights=None)
             eff_model.classifier[1] = nn.Linear(eff_model.classifier[1].in_features, 4)
             try:
@@ -243,7 +243,6 @@ with tab5:
                 st.warning(f"⚠️ EfficientNet load issue: {e}")
             eff_model.eval()
 
-            # Hybrid ResNet18
             hybrid_model = models.resnet18(weights=None)
             hybrid_model.fc = nn.Linear(hybrid_model.fc.in_features, 4)
             try:
@@ -265,7 +264,6 @@ with tab5:
             st.error(f"❌ Failed to load ECG models: {e}")
             st.stop()
 
-        # ---------- IMAGE UPLOADER ----------
         transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
