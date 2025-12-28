@@ -97,20 +97,17 @@ with tab1:
         st.success("Data saved. Go to Prediction Result tab.")
 
 # ==============================
-# TAB 2 – RESULT
+# TAB 2 – RESULT (Colorful)
 # ==============================
 with tab2:
     st.header("📊 Prediction Result")
 
-    # Check if prediction input exists
     if "show" not in st.session_state:
         st.info("Please predict first from Tab 1.")
         st.stop()
 
-    # Get input data
     input_data = st.session_state["data"]
 
-    # Collect predictions from all models
     preds = []
     for name, model in ml_models.items():
         pred = model.predict(input_data)[0]
@@ -120,25 +117,44 @@ with tab2:
         st.error("No predictions available.")
         st.stop()
 
-    # Calculate average risk percentage
     risk = np.mean(preds) * 100
 
-    # Show gauge chart
+    # Colorful gauge
     gauge = go.Figure(go.Indicator(
-        mode="gauge+number",
+        mode="gauge+number+delta",
         value=risk,
-        title={"text": "Heart Disease Risk (%)"},
-        gauge={"axis": {"range": [0, 100]}}
+        title={"text": "Heart Disease Risk (%)", "font": {"size": 24, "color": "darkblue"}},
+        gauge={
+            "axis": {"range": [0, 100]},
+            "bar": {"color": "darkred"},
+            "steps": [
+                {"range": [0, 25], "color": "lightgreen"},
+                {"range": [25, 50], "color": "yellow"},
+                {"range": [50, 75], "color": "orange"},
+                {"range": [75, 100], "color": "red"}
+            ],
+            "threshold": {
+                "line": {"color": "black", "width": 4},
+                "thickness": 0.75,
+                "value": risk
+            }
+        }
     ))
     st.plotly_chart(gauge, use_container_width=True)
 
-    # Show individual model predictions
+    # Colorful individual model table
     st.subheader("Individual Model Predictions")
     pred_df = pd.DataFrame({
         "Model": list(ml_models.keys()),
         "Prediction": ["Disease" if p == 1 else "No Disease" for p in preds]
     })
-    st.table(pred_df)
+
+    # Apply coloring using Pandas Styler
+    def color_prediction(val):
+        color = "red" if val == "Disease" else "green"
+        return f"color: {color}; font-weight: bold"
+
+    st.table(pred_df.style.applymap(color_prediction, subset=["Prediction"]))
 
 # ==============================
 # TAB 3 – BULK PREDICTION
@@ -203,6 +219,7 @@ with tab5:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
+
 
 
 
