@@ -4,13 +4,15 @@ import numpy as np
 import pickle
 import plotly.express as px
 import plotly.graph_objects as go
+from PIL import Image
+from torchvision import transforms
+import onnxruntime as ort
 
 # --------------------- PAGE CONFIG ---------------------
 st.set_page_config(page_title="Heart Disease App", page_icon="💖", layout="wide")
 
 # --------------------- DARK MODE TOGGLE ---------------------
 dark_mode = st.sidebar.checkbox("🌙 Dark Mode")
-
 if dark_mode:
     bg_color = "#000000"
     font_color = "white"
@@ -61,7 +63,7 @@ st.sidebar.header("Built with ML & Deep Health Analytics")
 # ================================================================
 # ✅ TABS
 # ================================================================
-st.title("💖 Heart Disease Prediction System ")
+st.title("💖 Heart Disease Prediction System")
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🔮 Predict", "📊 Prediction Result", "📂 Bulk Predict", "📈 Model Info", "🫀 ECG Model"
 ])
@@ -134,7 +136,7 @@ with tab2:
                 predictions.append(model.predict(input_data))
             except Exception:
                 st.warning(f"⚠️ Failed to load {m}")
-                predictions.append([0])  # fallback
+                predictions.append([0])
 
         risk_score = np.mean([r[0] for r in predictions]) * 100
 
@@ -171,10 +173,8 @@ with tab3:
 
     if file:
         df = pd.read_csv(file)
-
         if "HeartDisease" in df.columns:
             df = df.drop("HeartDisease", axis=1)
-
         try:
             model = pickle.load(open('LogisticRegressionmodel.pkl', 'rb'))
             df["Prediction"] = model.predict(df)
@@ -204,101 +204,54 @@ with tab4:
     st.plotly_chart(fig)
 
 # ================================================================
-# TAB 5 — ECG (Dynamic: Cloud safe / Local full)
+# TAB 5 — ECG using ONNX
 # ================================================================
 with tab5:
-    st.header("🫀 ECG Image Diagnosis")
+    st.header("🫀 ECG Image Diagnosis (Cloud-Compatible)")
 
     try:
-        import torch
-        import torch.nn as nn
-        from torchvision import models, transforms
-        from PIL import Image
-        torch_available = True
-    except ImportError:
-        torch_available = False
+        eff_session = ort.InferenceSession("efficientnet_ecg_model.onnx")
+        hybrid_session = ort.InferenceSession("hybrid_ecg_model.onnx")
+        st.success("✅ ECG ONNX models loaded successfully!")
+    except Exception as e:
+        st.error(f"❌ Failed to load ONNX models: {e}")
+        st.stop()
 
-    if not torch_available:
-        st.info(
-            "⚠️ ECG deep learning models cannot run on Streamlit Cloud (Python 3.13).\n"
-            "✅ Heart Disease ML predictions (Tabs 1-4) fully functional.\n"
-            "📌 To enable ECG locally: install Python 3.10-3.12, PyTorch, torchvision, and place .pth files in project folder."
-        )
-    else:
-        st.success("✅ PyTorch detected — ECG models enabled")
-        
-        @st.cache_resource
-        def load_ecg_models():
-            device = torch.device("cpu")
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5,0.5,0.5],[0.5,0.5,0.5])
+    ])
 
-            eff_model = models.efficientnet_b0(weights=None)
-            eff_model.classifier[1] = nn.Linear(eff_model.classifier[1].in_features, 4)
-            try:
-                checkpoint = torch.load("efficientnet_ecg_model.pth", map_location=device)
-                if "state_dict" in checkpoint:
-                    eff_model.load_state_dict(checkpoint["state_dict"], strict=False)
-                else:
-                    eff_model.load_state_dict(checkpoint, strict=False)
-            except Exception as e:
-                st.warning(f"⚠️ EfficientNet load issue: {e}")
-            eff_model.eval()
+    uploaded_image = st.file_uploader("📤 Upload ECG Image", type=["jpg","png","jpeg"])
+    class_labels = ["Normal", "Myocardial Infarction", "Abnormal Heartbeat", "History of MI"]
+    medical_messages = {
+        "Normal": "✅ Normal ECG — no abnormalities detected. Stay healthy!",
+        "Myocardial Infarction": "⚠️ Myocardial Infarction detected! Immediate medical consultation required.",
+        "Abnormal Heartbeat": "💓 Irregular heartbeat detected — consult a cardiologist.",
+        "History of MI": "📋 Past history of heart problem — maintain medication and check-ups."
+    }
 
-            hybrid_model = models.resnet18(weights=None)
-            hybrid_model.fc = nn.Linear(hybrid_model.fc.in_features, 4)
-            try:
-                checkpoint2 = torch.load("hybrid_ecg_model.pth", map_location=device)
-                if "state_dict" in checkpoint2:
-                    hybrid_model.load_state_dict(checkpoint2["state_dict"], strict=False)
-                else:
-                    hybrid_model.load_state_dict(checkpoint2, strict=False)
-            except Exception as e:
-                st.warning(f"⚠️ Hybrid model load issue: {e}")
-            hybrid_model.eval()
+    if uploaded_image:
+        image = Image.open(uploaded_image).convert("RGB")
+        st.image(image, caption="Uploaded ECG Image", use_column_width=True)
+        img_tensor = transform(image).unsqueeze(0).numpy()
+        eff_output = eff_session.run(None, {eff_session.get_inputs()[0].name: img_tensor})[0]
+        hybrid_output = hybrid_session.run(None, {hybrid_session.get_inputs()[0].name: img_tensor})[0]
+        eff_pred = np.argmax(eff_output, axis=1)[0]
+        hybrid_pred = np.argmax(hybrid_output, axis=1)[0]
 
-            return eff_model, hybrid_model
+        st.subheader("🩺 Model Predictions")
+        st.write("EfficientNet:", class_labels[eff_pred])
+        st.write("Hybrid Model:", class_labels[hybrid_pred])
 
-        try:
-            eff_model, hybrid_model = load_ecg_models()
-            st.success("✅ ECG models loaded successfully")
-        except Exception as e:
-            st.error(f"❌ Failed to load ECG models: {e}")
-            st.stop()
-
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5,0.5,0.5], [0.5,0.5,0.5])
-        ])
-
-        uploaded_image = st.file_uploader("📤 Upload ECG Image", type=["jpg", "png", "jpeg"])
-        class_labels = ["Normal", "Myocardial Infarction", "Abnormal Heartbeat", "History of MI"]
-        medical_messages = {
-            "Normal": "✅ Normal ECG — no abnormalities detected. Stay healthy!",
-            "Myocardial Infarction": "⚠️ Myocardial Infarction detected! Immediate medical consultation required.",
-            "Abnormal Heartbeat": "💓 Irregular heartbeat detected — consult a cardiologist.",
-            "History of MI": "📋 Past history of heart problem — maintain medication and check-ups."
-        }
-
-        if uploaded_image:
-            image = Image.open(uploaded_image).convert("RGB")
-            st.image(image, caption="Uploaded ECG Image", use_column_width=True)
-            img_tensor = transform(image).unsqueeze(0)
-
-            with torch.no_grad():
-                eff_pred = torch.argmax(eff_model(img_tensor), dim=1).item()
-                hybrid_pred = torch.argmax(hybrid_model(img_tensor), dim=1).item()
-
-            st.subheader("🩺 Model Predictions")
-            st.write("EfficientNet:", class_labels[eff_pred])
-            st.write("Hybrid Model:", class_labels[hybrid_pred])
-
-            if eff_pred == hybrid_pred:
-                final_pred = class_labels[eff_pred]
-                st.success(f"✅ Final Diagnosis: {final_pred}")
-                st.markdown(medical_messages[final_pred])
-            else:
-                st.warning("⚠️ Models disagree — manual review advised")
-                st.write(f"EfficientNet: {class_labels[eff_pred]}, Hybrid: {class_labels[hybrid_pred]}")
-                for pred in [class_labels[eff_pred], class_labels[hybrid_pred]]:
-                    if pred != "Normal":
-                        st.warning(medical_messages[pred])
+        if eff_pred == hybrid_pred:
+            final_pred = class_labels[eff_pred]
+            st.success(f"✅ Final Diagnosis: {final_pred}")
+            st.markdown(medical_messages[final_pred])
+        else:
+            st.warning("⚠️ Models disagree — manual review advised")
+            st.write(f"EfficientNet: {class_labels[eff_pred]}, Hybrid: {class_labels[hybrid_pred]}")
+            for pred in [class_labels[eff_pred], class_labels[hybrid_pred]]:
+                if pred != "Normal":
+                    st.warning(medical_messages[pred])
