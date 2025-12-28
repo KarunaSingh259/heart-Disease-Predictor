@@ -2,155 +2,179 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import pickle
+import plotly.graph_objects as go
 import onnxruntime as ort
+from PIL import Image
 
-# ---------------- PAGE CONFIG ----------------
+# ==============================
+# PAGE CONFIG
+# ==============================
 st.set_page_config(
-    page_title="Heart Disease Prediction App",
-    page_icon="💖",
+    page_title="Heart Disease Predictor",
+    page_icon="❤️",
     layout="wide"
 )
 
-st.title("💖 Heart Disease Prediction System")
+st.title("❤️ Heart Disease Prediction System")
 
-# ---------------- LOAD ML MODELS ----------------
+# ==============================
+# LOAD ML MODELS (SAFE)
+# ==============================
 @st.cache_resource
 def load_ml_models():
-    models = {}
-    try:
-        models["Decision Tree"] = pickle.load(open("decision_tree_model.pkl", "rb"))
-        models["Random Forest"] = pickle.load(open("random_forest_model.pkl", "rb"))
-        models["SVM"] = pickle.load(open("svm_model.pkl", "rb"))
-        models["Logistic Regression"] = pickle.load(open("LogisticRegressionmodel.pkl", "rb"))
-        models["Voting Classifier"] = pickle.load(open("voting_classifier_model.pkl", "rb"))
-    except Exception as e:
-        st.error(f"❌ Error loading ML models: {e}")
+    models = {
+        "Decision Tree": pickle.load(open("decision_tree_model.pkl", "rb")),
+        "Logistic Regression": pickle.load(open("LogisticRegressionmodel.pkl", "rb")),
+        "Random Forest": pickle.load(open("random_forest_model.pkl", "rb")),
+        "SVM": pickle.load(open("svm_model.pkl", "rb"))
+    }
     return models
 
 ml_models = load_ml_models()
 
-# ---------------- LOAD ONNX MODELS ----------------
+# ==============================
+# LOAD ONNX ECG MODELS
+# ==============================
 @st.cache_resource
-def load_onnx_model(path):
-    try:
-        return ort.InferenceSession(path, providers=["CPUExecutionProvider"])
-    except Exception as e:
-        st.error(f"❌ Failed to load ONNX model {path}: {e}")
-        return None
+def load_onnx_models():
+    eff_sess = ort.InferenceSession("efficientnet_ecg_model.onnx")
+    hyb_sess = ort.InferenceSession("hybrid_ecg_model.onnx")
+    return eff_sess, hyb_sess
 
-efficientnet_session = load_onnx_model("efficientnet_ecg_model.onnx")
-hybrid_session = load_onnx_model("hybrid_ecg_model.onnx")
+eff_sess, hyb_sess = load_onnx_models()
 
-# ---------------- TABS ----------------
+# ==============================
+# TABS
+# ==============================
 tabs = st.tabs([
-    "🧪 Single Prediction",
-    "📊 Batch Prediction",
+    "🔮 Predict",
+    "📊 Result",
     "📈 Model Comparison",
-    "📁 Dataset Preview",
-    "🫀 ECG Deep Learning "
+    "📄 Model Info",
+    "🫀 ECG Image Test"
 ])
 
-# ==================================================
-# TAB 1: SINGLE PREDICTION
-# ==================================================
+# ==============================
+# TAB 1 – INPUT
+# ==============================
 with tabs[0]:
-    st.subheader("🧪 Single Patient Prediction")
+    st.subheader("🔮 Enter Patient Details")
 
-    age = st.number_input("Age", 20, 100, 45)
-    sex = st.selectbox("Sex", [0, 1])
-    cp = st.selectbox("Chest Pain Type", [0, 1, 2, 3])
-    trestbps = st.number_input("Resting BP", 80, 200, 120)
-    chol = st.number_input("Cholesterol", 100, 400, 200)
-    fbs = st.selectbox("Fasting Blood Sugar", [0, 1])
-    thalach = st.number_input("Max Heart Rate", 60, 220, 150)
-    exang = st.selectbox("Exercise Induced Angina", [0, 1])
+    col1, col2 = st.columns(2)
 
-    features = np.array([[age, sex, cp, trestbps, chol, fbs, thalach, exang]])
+    with col1:
+        age = st.number_input("Age", 1, 120, 45)
+        sex = st.selectbox("Sex", ["Male", "Female"])
+        cp = st.selectbox("Chest Pain Type", [0, 1, 2, 3])
+        trestbps = st.number_input("Resting BP", 80, 200, 120)
+        chol = st.number_input("Cholesterol", 100, 600, 200)
+        fbs = st.selectbox("Fasting Blood Sugar > 120", [0, 1])
 
-    model_choice = st.selectbox("Select Model", list(ml_models.keys()))
+    with col2:
+        restecg = st.selectbox("Rest ECG", [0, 1, 2])
+        thalach = st.number_input("Max Heart Rate", 60, 220, 150)
+        exang = st.selectbox("Exercise Angina", [0, 1])
+        oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
+        slope = st.selectbox("Slope", [0, 1, 2])
+        ca = st.selectbox("CA", [0, 1, 2, 3, 4])
+        thal = st.selectbox("Thal", [1, 2, 3])
+
+    sex = 1 if sex == "Male" else 0
+
+    sample = np.array([[age, sex, cp, trestbps, chol, fbs,
+                         restecg, thalach, exang, oldpeak,
+                         slope, ca, thal]])
 
     if st.button("Predict"):
-        model = ml_models[model_choice]
-        result = model.predict(features)[0]
-        st.success("❤️ Heart Disease Detected" if result == 1 else "✅ No Heart Disease")
+        st.session_state["sample"] = sample
+        st.success("Data saved. Go to Result tab.")
 
-# ==================================================
-# TAB 2: BATCH PREDICTION
-# ==================================================
+# ==============================
+# TAB 2 – RESULT
+# ==============================
 with tabs[1]:
-    st.subheader("📊 Batch Prediction using CSV")
+    st.subheader("📊 Prediction Result")
 
-    file = st.file_uploader("Upload CSV file", type=["csv"])
+    if "sample" not in st.session_state:
+        st.warning("Please predict first.")
+    else:
+        sample = st.session_state["sample"]
 
-    if file:
-        df = pd.read_csv(file)
-        st.dataframe(df.head())
+        preds = []
+        for model in ml_models.values():
+            preds.append(model.predict(sample)[0])
 
-        model_choice = st.selectbox("Select Model", list(ml_models.keys()), key="batch")
-        model = ml_models[model_choice]
+        risk = np.mean(preds) * 100
 
-        if st.button("Predict Batch"):
-            preds = model.predict(df.values)
-            df["Prediction"] = preds
-            st.success("Batch Prediction Completed")
-            st.dataframe(df)
+        gauge = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=risk,
+            title={"text": "Heart Disease Risk (%)"},
+            gauge={
+                "axis": {"range": [0, 100]},
+                "steps": [
+                    {"range": [0, 40], "color": "lightgreen"},
+                    {"range": [40, 70], "color": "yellow"},
+                    {"range": [70, 100], "color": "red"}
+                ]
+            }
+        ))
 
-# ==================================================
-# TAB 3: MODEL COMPARISON
-# ==================================================
+        st.plotly_chart(gauge, use_container_width=True)
+
+# ==============================
+# TAB 3 – MODEL COMPARISON (FIXED)
+# ==============================
 with tabs[2]:
     st.subheader("📈 Model Comparison")
 
-    sample = np.array([[45, 1, 2, 120, 200, 0, 150, 0]])
+    sample = np.array([[45,1,2,120,200,0,1,150,0,2.3,1,0,2]])
 
     results = {}
     for name, model in ml_models.items():
-        results[name] = model.predict(sample)[0]
+        results[name] = int(model.predict(sample)[0])
 
     st.json(results)
 
-# ==================================================
-# TAB 4: DATASET PREVIEW
-# ==================================================
+# ==============================
+# TAB 4 – INFO
+# ==============================
 with tabs[3]:
-    st.subheader("📁 Dataset Preview")
+    st.subheader("📄 Model Accuracy")
 
-    try:
-        df = pd.read_csv("heart (3).csv")
-        st.dataframe(df.head())
-        st.write("Shape:", df.shape)
-    except:
-        st.warning("Dataset file not found")
+    acc = {
+        "Decision Tree": 80.9,
+        "Logistic Regression": 85.8,
+        "Random Forest": 84.2,
+        "SVM": 84.2
+    }
 
-# ==================================================
-# TAB 5: ECG DEEP LEARNING (ONNX)
-# ==================================================
+    df = pd.DataFrame(acc.items(), columns=["Model", "Accuracy"])
+    st.bar_chart(df.set_index("Model"))
+
+# ==============================
+# TAB 5 – ECG IMAGE (ONNX)
+# ==============================
 with tabs[4]:
-    st.subheader("🫀 ECG Classification (ONNX Models)")
+    st.subheader("🫀 ECG Image Diagnosis (ONNX)")
 
-    st.info("✔ ONNX models work on Streamlit Cloud (No PyTorch needed)")
+    uploaded = st.file_uploader("Upload ECG Image", ["jpg", "png"])
 
-    uploaded_ecg = st.file_uploader("Upload ECG NumPy File (.npy)", type=["npy"])
+    labels = ["Normal", "Myocardial Infarction", "Abnormal Heartbeat", "History of MI"]
 
-    model_type = st.radio(
-        "Select ECG Model",
-        ["EfficientNet ECG", "Hybrid ECG"]
-    )
+    if uploaded:
+        img = Image.open(uploaded).convert("RGB").resize((224, 224))
+        st.image(img, caption="Uploaded ECG")
 
-    if uploaded_ecg:
-        ecg_data = np.load(uploaded_ecg)
-        ecg_data = ecg_data.astype(np.float32)
-        ecg_data = np.expand_dims(ecg_data, axis=0)
+        img_arr = np.array(img).astype(np.float32) / 255.0
+        img_arr = np.transpose(img_arr, (2, 0, 1))
+        img_arr = np.expand_dims(img_arr, axis=0)
 
-        if model_type == "EfficientNet ECG" and efficientnet_session:
-            inputs = {efficientnet_session.get_inputs()[0].name: ecg_data}
-            output = efficientnet_session.run(None, inputs)
-            st.success(f"Prediction Output: {output}")
+        eff_pred = eff_sess.run(None, {"input": img_arr})[0]
+        hyb_pred = hyb_sess.run(None, {"input": img_arr})[0]
 
-        elif model_type == "Hybrid ECG" and hybrid_session:
-            inputs = {hybrid_session.get_inputs()[0].name: ecg_data}
-            output = hybrid_session.run(None, inputs)
-            st.success(f"Prediction Output: {output}")
+        eff_class = labels[np.argmax(eff_pred)]
+        hyb_class = labels[np.argmax(hyb_pred)]
 
-        else:
-            st.error("Selected model not available")
+        st.success(f"EfficientNet: {eff_class}")
+        st.success(f"Hybrid Model: {hyb_class}")
