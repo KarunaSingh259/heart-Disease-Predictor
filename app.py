@@ -49,7 +49,7 @@ eff_sess, hyb_sess = load_onnx_models()
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🔮 Predict",
     "📊 Prediction Result",
-    "📈 Model Comparison",
+    "📂 Bulk Predict",
     "📄 Model Info",
     "🫀 ECG Image Test"
 ])
@@ -101,60 +101,71 @@ with tab1:
 with tab2:
     st.header("📊 Prediction Result")
 
-    if "show" not in st.session_state or not st.session_state["show"]:
-        st.warning("Please enter patient details and click Predict.")
-    else:
-        sample = st.session_state["data"]
+    if "show" not in st.session_state:
+        st.info("Predict first.")
+        st.stop()
 
-        results = {}
-        for name, model in ml_models.items():
-            try:
-                results[name] = int(model.predict(sample)[0])
-            except Exception as e:
-                results[name] = f"Error: {e}"
+    models = {
+        "Decision Tree": "decision_tree_model.pkl",
+        "Logistic Regression": "LogisticRegressionmodel.pkl",
+        "Random Forest": "random_forest_model.pkl",
+        "SVM": "svm_model.pkl",
+        "Voting": "voting_classifier_model.pkl"
+    }
 
-        risk = np.mean([v for v in results.values() if isinstance(v, (int, float))]) * 100
+    preds = []
+    for name, file in models.items():
+        model = load_pickle_model(file)
+        if model:
+            preds.append(model.predict(st.session_state["data"])[0])
 
-        st.json(results)
+    if not preds:
+        st.error("No predictions available.")
+        st.stop()
 
-        gauge = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=risk,
-            title={"text": "Heart Disease Risk (%)"},
-            gauge={
-                "axis": {"range": [0, 100]},
-                "steps": [
-                    {"range": [0, 40], "color": "lightgreen"},
-                    {"range": [40, 70], "color": "yellow"},
-                    {"range": [70, 100], "color": "red"}
-                ]
-            }
-        ))
-        st.plotly_chart(gauge, use_container_width=True)
+    risk = np.mean(preds) * 100
+
+    gauge = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=risk,
+        title={"text": "Heart Disease Risk (%)"},
+        gauge={"axis":{"range":[0,100]}}
+    ))
+    st.plotly_chart(gauge, use_column_width=True)
 # ==============================
 # TAB 3 – BULK PREDICTION
 # ==============================
 with tab3:
-    st.header("📈 Bulk Prediction (CSV Upload)")
+    st.header("📂 Bulk Prediction")
+    file = st.file_uploader("Upload CSV", type="csv")
 
-    uploaded_file = st.file_uploader("Upload CSV with patient data", type=["csv"])
+    if file:
+        df = pd.read_csv(file)
+        if "HeartDisease" in df.columns:
+            df = df.drop("HeartDisease", axis=1)
 
-    if uploaded_file:
-        bulk_df = pd.read_csv(upload
-
+        model = load_pickle_model("LogisticRegressionmodel.pkl")
+        if model:
+            df["Prediction"] = model.predict(df)
+            df["Prediction"] = df["Prediction"].map(
+                {0: "No Disease", 1: "Disease"}
+            )
+            st.write(df)
 # ==============================
 # TAB 4 – MODEL INFO
 # ==============================
 with tab4:
-    st.header("📄 Model Accuracy")
+    st.header("📈 Model Accuracy")
     acc = {
         "Decision Tree": 80.9,
         "Logistic Regression": 85.8,
         "Random Forest": 84.2,
-        "SVM": 84.2
+        "SVM": 84.2,
+        "Gridrf": 89.7
     }
     df = pd.DataFrame(acc.items(), columns=["Model", "Accuracy"])
-    st.bar_chart(df.set_index("Model"))
+    st.plotly_chart(px.bar(df, x="Model", y="Accuracy"))
+
 
 # ==============================
 # TAB 5 – ECG IMAGE TEST
@@ -181,4 +192,5 @@ with tab5:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
+
 
