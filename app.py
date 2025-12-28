@@ -210,31 +210,48 @@ with tab4:
 
 
 # ==============================
-# TAB 5 – ECG IMAGE TEST
+# TAB 5 – ECG IMAGE TEST WITH SUGGESTIONS
 # ==============================
 with tab5:
-    st.header("🫀 ECG Image Diagnosis ")
+    st.header("🫀 ECG Image Diagnosis (ONNX)")
 
     uploaded = st.file_uploader("Upload ECG Image", ["jpg", "png"])
+    
     labels = ["Normal", "Myocardial Infarction", "Abnormal Heartbeat", "History of MI"]
 
-    if uploaded:
-        img = Image.open(uploaded).convert("RGB").resize((224, 224))
-        st.image(img, caption="Uploaded ECG")
+    # Suggestions for each class
+    suggestions = {
+        "Normal": "✅ ECG is normal. Maintain a healthy lifestyle and regular check-ups.",
+        "Myocardial Infarction": "❌ Signs of a heart attack. Consult a cardiologist immediately!",
+        "Abnormal Heartbeat": "⚠️ Irregular heartbeat detected. Monitor and consult a cardiologist.",
+        "History of MI": "⚠️ Previous heart attack detected. Follow up with your doctor regularly."
+    }
 
+    if uploaded:
+        # Display image
+        img = Image.open(uploaded).convert("RGB").resize((224, 224))
+        st.image(img, caption="Uploaded ECG", use_column_width=True)
+
+        # Preprocess image
         img_arr = np.array(img).astype(np.float32) / 255.0
         img_arr = np.transpose(img_arr, (2, 0, 1))
         img_arr = np.expand_dims(img_arr, axis=0)
 
+        # Run ONNX models
         eff_pred = eff_sess.run(None, {"input": img_arr})[0]
         hyb_pred = hyb_sess.run(None, {"input": img_arr})[0]
 
         eff_class = labels[np.argmax(eff_pred)]
         hyb_class = labels[np.argmax(hyb_pred)]
 
-        st.success(f"EfficientNet: {eff_class}")
-        st.success(f"Hybrid Model: {hyb_class}")
+        # Display predictions
+        st.success(f"EfficientNet Prediction: {eff_class}")
+        st.success(f"Hybrid Model Prediction: {hyb_class}")
 
+        # Display suggestions
+        st.markdown("### 📝 Health Suggestions")
+        st.info(f"EfficientNet: {suggestions[eff_class]}")
+        st.info(f"Hybrid Model: {suggestions[hyb_class]}")
 
 
 
