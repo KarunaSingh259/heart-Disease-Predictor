@@ -69,15 +69,12 @@ with tabs[0]:
         trestbps = st.number_input("Resting BP", 80, 200, 120)
         chol = st.number_input("Cholesterol", 100, 600, 200)
         fbs = st.selectbox("Fasting Blood Sugar > 120", [0, 1])
-
-    with col2:
         restecg = st.selectbox("Rest ECG", [0, 1, 2])
         thalach = st.number_input("Max Heart Rate", 60, 220, 150)
         exang = st.selectbox("Exercise Angina", [0, 1])
         oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
         slope = st.selectbox("Slope", [0, 1, 2])
-        ca = st.selectbox("CA", [0, 1, 2, 3, 4])
-        thal = st.selectbox("Thal", [1, 2, 3])
+       
 
     sex = 1 if sex == "Male" else 0
 
@@ -178,3 +175,4 @@ with tabs[4]:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
+
