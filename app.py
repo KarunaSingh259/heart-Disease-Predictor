@@ -131,15 +131,16 @@ with tab2:
             }
         ))
         st.plotly_chart(gauge, use_container_width=True)
-
 # ==============================
-# TAB 3 – MODEL COMPARISON
+# TAB 3 – BULK PREDICTION
 # ==============================
 with tab3:
-    st.header("📈 Model Comparison")
-    sample = st.session_state.get("data", pd.DataFrame(np.zeros((1,11)), columns=input_df.columns))
-    comparison = {name: int(model.predict(sample)[0]) for name, model in ml_models.items()}
-    st.json(comparison)
+    st.header("📈 Bulk Prediction (CSV Upload)")
+
+    uploaded_file = st.file_uploader("Upload CSV with patient data", type=["csv"])
+
+    if uploaded_file:
+        bulk_df = pd.read_csv(upload
 
 # ==============================
 # TAB 4 – MODEL INFO
@@ -180,3 +181,4 @@ with tab5:
 
         st.success(f"EfficientNet: {eff_class}")
         st.success(f"Hybrid Model: {hyb_class}")
+
