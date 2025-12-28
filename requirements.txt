@@ -7,3 +7,4 @@ xgboost
 Pillow
 requests
 onnxruntime
+torchvision
