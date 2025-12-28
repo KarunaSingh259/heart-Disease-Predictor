@@ -4,30 +4,11 @@ import numpy as np
 import pickle
 import plotly.express as px
 import plotly.graph_objects as go
-import time
-import os
-import torch
-import torch.nn as nn
-from torchvision import models, transforms
-from PIL import Image
 
-# ---------------- PAGE CONFIG ----------------
+# --------------------- PAGE CONFIG ---------------------
 st.set_page_config(page_title="Heart Disease App", page_icon="💖", layout="wide")
 
-# ---------------- SAFE PICKLE LOADER ----------------
-@st.cache_resource
-def load_pickle_model(path):
-    if not os.path.exists(path):
-        st.error(f"❌ Model file not found: {path}")
-        return None
-    try:
-        with open(path, "rb") as f:
-            return pickle.load(f)
-    except Exception as e:
-        st.error(f"❌ Failed to load {path}: {e}")
-        return None
-
-# ---------------- DARK MODE ----------------
+# --------------------- DARK MODE TOGGLE ---------------------
 dark_mode = st.sidebar.checkbox("🌙 Dark Mode")
 
 if dark_mode:
@@ -39,236 +20,196 @@ else:
     font_color = "black"
     card_bg = "rgba(255,255,255,0.55)"
 
-# ---------------- CSS ----------------
+# --------------------- CUSTOM CSS ---------------------
 st.markdown(f"""
 <style>
-body {{background-color:{bg_color}; color:{font_color};}}
+body {{
+    background-color: {bg_color};
+    color: {font_color};
+}}
 .card {{
-    background:{card_bg};
-    padding:25px;
-    border-radius:18px;
-    box-shadow:0px 4px 18px rgba(0,0,0,0.2);
+    background: {card_bg};
+    padding: 25px;
+    border-radius: 18px;
+    box-shadow: 0px 4px 18px rgba(0,0,0,0.2);
+    margin-bottom: 20px;
+}}
+.stButton>button {{
+    background: linear-gradient(to right,#ff4b6e,#ff0055);
+    color: white;
+    border-radius: 12px;
+    padding: 10px 22px;
+    border: none;
+    font-size: 18px;
+    transition: 0.3s;
+}}
+.stButton>button:hover {{
+    transform: scale(1.03);
+}}
+[data-testid="stSidebar"] {{
+    background: {card_bg};
+    backdrop-filter: blur(8px);
 }}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- SIDEBAR ----------------
+# --------------------- SIDEBAR ---------------------
 st.sidebar.title("💖 HEART DISEASE PREDICTOR")
 st.sidebar.markdown("Your intelligent cardiac care assistant 💓")
-st.sidebar.image("logo.png", use_column_width=True)
 st.sidebar.header("Built with ML & Deep Health Analytics")
 
-# ---------------- TABS ----------------
-st.title("💖 Heart Disease Prediction System")
+# ================================================================
+# ✅ TABS (Now 4 + ECG placeholder)
+# ================================================================
+st.title("💖 Heart Disease Prediction System ")
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🔮 Predict", "📊 Prediction Result", "📂 Bulk Predict",
-    "📈 Model Info", "🫀 ECG Model"
+    "🔮 Predict", "📊 Prediction Result", "📂 Bulk Predict", "📈 Model Info", "🫀 ECG Model"
 ])
 
-# ================= TAB 1 =================
+# ================================================================
+# ✅ TAB 1 — PREDICT (INPUT FORM)
+# ================================================================
 with tab1:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("🔍 Single Prediction")
 
     col1, col2 = st.columns(2)
     with col1:
         age = st.number_input("Age", 1, 120, 30)
         sex = st.selectbox("Sex", ["Male", "Female"])
-        cp = st.selectbox("Chest Pain Type",
-                          ["Typical Angina", "Atypical Angina",
-                           "Non-Anginal Pain", "Asymptomatic"])
-        rbp = st.number_input("Resting BP", 0, 300, 120)
-        chol = st.number_input("Cholesterol", 0, 600)
+        chest_pain = st.selectbox("Chest Pain Type",
+                                  ["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"])
+        resting_bp = st.number_input("Resting BP (mm Hg)", 0, 300, 120)
+        cholesterol = st.number_input("Cholesterol (mg/dl)", 0, 600)
     with col2:
-        fbs = st.selectbox("Fasting Blood Sugar", ["<=120", ">120"])
-        ecg = st.selectbox("Resting ECG",
-                           ["Normal", "ST-T Abnormality", "LVH"])
-        maxhr = st.number_input("Max Heart Rate", 60, 202, 150)
-        angina = st.selectbox("Exercise Angina", ["Yes", "No"])
-        oldpeak = st.number_input("Oldpeak", 0.0, 10.0)
-        slope = st.selectbox("ST Slope", ["Up", "Flat", "Down"])
+        fasting_bs = st.selectbox("Fasting Blood Sugar", ["<= 120 mg/dl", "> 120 mg/dl"])
+        resting_ecg = st.selectbox("Resting ECG",
+                                   ["Normal", "ST-T Wave Abnormality", "Left Ventricular Hypertrophy"])
+        max_hr = st.number_input("Maximum Heart Rate", 60, 202, 150)
+        exercise_angina = st.selectbox("Exercise-Induced Angina", ["Yes", "No"])
+        oldpeak = st.number_input("Oldpeak (ST Depression)", 0.0, 10.0)
+        st_slope = st.selectbox("ST Slope", ["Upsloping", "Flat", "Downsloping"])
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    input_df = pd.DataFrame({
-        "Age": [age],
-        "Sex": [0 if sex == "Male" else 1],
-        "ChestPainType": [["Typical Angina","Atypical Angina",
-                           "Non-Anginal Pain","Asymptomatic"].index(cp)],
-        "RestingBP": [rbp],
-        "Cholesterol": [chol],
-        "FastingBS": [1 if fbs == ">120" else 0],
-        "RestingECG": [["Normal","ST-T Abnormality","LVH"].index(ecg)],
-        "MaxHR": [maxhr],
-        "ExerciseAngina": [1 if angina == "Yes" else 0],
-        "Oldpeak": [oldpeak],
-        "ST_Slope": [["Up","Flat","Down"].index(slope)]
+    # Encode
+    sex = 0 if sex == "Male" else 1
+    chest_pain = ["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"].index(chest_pain)
+    fasting_bs = 1 if fasting_bs == "> 120 mg/dl" else 0
+    resting_ecg = ["Normal", "ST-T Wave Abnormality", "Left Ventricular Hypertrophy"].index(resting_ecg)
+    exercise_angina = 1 if exercise_angina == "Yes" else 0
+    st_slope = ["Upsloping", "Flat", "Downsloping"].index(st_slope)
+
+    input_data = pd.DataFrame({
+        'Age': [age], 'Sex': [sex], 'ChestPainType': [chest_pain],
+        'RestingBP': [resting_bp], 'Cholesterol': [cholesterol],
+        'FastingBS': [fasting_bs], 'RestingECG': [resting_ecg],
+        'MaxHR': [max_hr], 'ExerciseAngina': [exercise_angina],
+        'Oldpeak': [oldpeak], 'ST_Slope': [st_slope]
     })
 
     if st.button("🔮 Predict Now"):
-        st.session_state["data"] = input_df
-        st.session_state["show"] = True
-        st.success("Data saved. Go to Prediction Result tab.")
+        st.session_state["input_data"] = input_data
+        st.session_state["show_result"] = True
+        st.success("✅ Prediction Data Saved! Go to '📊 Prediction Result' tab to view results.")
 
-# ================= TAB 2 =================
+# ================================================================
+# ✅ TAB 2 — PREDICTION RESULT
+# ================================================================
 with tab2:
     st.header("📊 Prediction Result")
+    if "show_result" not in st.session_state or not st.session_state["show_result"]:
+        st.info("⚠️ Please go to the Predict tab and click 'Predict Now' first.")
+    else:
+        input_data = st.session_state["input_data"]
+        modelnames = [
+            'decision_tree_model.pkl', 'LogisticRegressionmodel.pkl',
+            'random_forest_model.pkl', 'svm_model.pkl'
+        ]
+        algonames = ["Decision Tree", "Logistic Regression", "Random Forest", "SVM"]
 
-    if "show" not in st.session_state:
-        st.info("Predict first.")
-        st.stop()
+        predictions = []
+        for m in modelnames:
+            try:
+                model = pickle.load(open(m, 'rb'))
+                predictions.append(model.predict(input_data))
+            except Exception:
+                st.warning(f"⚠️ Failed to load {m}")
+                predictions.append([0])  # fallback
 
-    models = {
-        "Decision Tree": "decision_tree_model.pkl",
-        "Logistic Regression": "LogisticRegressionmodel.pkl",
-        "Random Forest": "random_forest_model.pkl",
-        "SVM": "svm_model.pkl",
-        "Voting": "voting_classifier_model.pkl"
-    }
+        risk_score = np.mean([r[0] for r in predictions]) * 100
 
-    preds = []
-    for name, file in models.items():
-        model = load_pickle_model(file)
-        if model:
-            preds.append(model.predict(st.session_state["data"])[0])
+        st.subheader("🧪 Heart Disease Risk (%)")
+        gauge = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=risk_score,
+            title={"text": "Heart Disease Probability"},
+            gauge={
+                "axis": {"range": [0, 100]},
+                "bar": {"color": "red"},
+                "steps": [
+                    {"range": [0, 40], "color": "lightgreen"},
+                    {"range": [40, 70], "color": "yellow"},
+                    {"range": [70, 100], "color": "red"}
+                ]
+            }
+        ))
+        st.plotly_chart(gauge, use_column_width=True)
 
-    if not preds:
-        st.error("No predictions available.")
-        st.stop()
+        st.subheader("📋 Model-wise Prediction Results")
+        for i, res in enumerate(predictions):
+            if res[0] == 0:
+                st.success(f"✅ {algonames[i]} → No Heart Disease")
+            else:
+                st.error(f"❌ {algonames[i]} → Heart Disease Detected")
 
-    risk = np.mean(preds) * 100
-
-    gauge = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=risk,
-        title={"text": "Heart Disease Risk (%)"},
-        gauge={"axis":{"range":[0,100]}}
-    ))
-    st.plotly_chart(gauge, use_column_width=True)
-
-# ================= TAB 3 =================
+# ================================================================
+# ✅ TAB 3 — BULK PREDICT
+# ================================================================
 with tab3:
-    st.header("📂 Bulk Prediction")
-    file = st.file_uploader("Upload CSV", type="csv")
+    st.header("📂 Bulk Prediction System")
+    file = st.file_uploader("Upload CSV (11 Features or with HeartDisease column)", type=["csv"])
 
     if file:
         df = pd.read_csv(file)
+
         if "HeartDisease" in df.columns:
             df = df.drop("HeartDisease", axis=1)
 
-        model = load_pickle_model("LogisticRegressionmodel.pkl")
-        if model:
+        try:
+            model = pickle.load(open('LogisticRegressionmodel.pkl', 'rb'))
             df["Prediction"] = model.predict(df)
-            df["Prediction"] = df["Prediction"].map(
-                {0: "No Disease", 1: "Disease"}
-            )
+            df["Prediction"] = df["Prediction"].map({0: "No Heart Disease", 1: "Heart Disease"})
+            st.success("✅ Predictions Completed!")
             st.write(df)
+            csv = df.to_csv(index=False).encode()
+            st.download_button("📥 Download Results CSV", csv, "results.csv", "text/csv")
+        except Exception:
+            st.error("❌ Failed to load model for bulk prediction.")
+    else:
+        st.info("Please upload a CSV file with correct columns to predict in bulk.")
 
-# ================= TAB 4 =================
+# ================================================================
+# ✅ TAB 4 — MODEL INFO
+# ================================================================
 with tab4:
-    st.header("📈 Model Accuracy")
+    st.header("📈 Model Accuracy Overview")
     acc = {
         "Decision Tree": 80.9,
         "Logistic Regression": 85.8,
         "Random Forest": 84.2,
-        "SVM": 84.2,
-        "Voting": 89.7
+        "SVM": 84.2
     }
-    df = pd.DataFrame(acc.items(), columns=["Model", "Accuracy"])
-    st.plotly_chart(px.bar(df, x="Model", y="Accuracy"))
+    df = pd.DataFrame({"Model": list(acc.keys()), "Accuracy": list(acc.values())})
+    fig = px.bar(df, x="Model", y="Accuracy", color="Accuracy", text="Accuracy")
+    st.plotly_chart(fig)
 
-# ================= TAB 5 — ECG MODEL =================
+# ================================================================
+# ✅ TAB 5 — ECG (CLOUD SAFE)
+# ================================================================
 with tab5:
-    st.header("🫀 ECG Image Diagnosis")
-
-    # -------- INFO MESSAGE FOR CLOUD --------
-    try:
-        import torch
-        import torch.nn as nn
-        from torchvision import models, transforms
-        from PIL import Image
-        ecg_available = True
-    except Exception:
-        ecg_available = False
-
-    if not ecg_available:
-        st.info(
-            "⚠️ ECG deep learning models are disabled on this deployment.\n\n"
-            "✅ Heart Disease ML prediction tabs are fully functional.\n"
-            "📌 To enable ECG locally, install Python 3.10-3.12 with PyTorch."
-        )
-    else:
-        # -------- SAFE MODEL LOADER --------
-        @st.cache_resource
-        def load_ecg_models():
-            device = torch.device("cpu")
-
-            # EfficientNet
-            eff_model = models.efficientnet_b0(weights=None)
-            eff_model.classifier[1] = nn.Linear(eff_model.classifier[1].in_features, 4)
-            try:
-                eff_ckpt = torch.load("efficientnet_ecg_model.pth", map_location=device)
-                if isinstance(eff_ckpt, dict) and "state_dict" in eff_ckpt:
-                    eff_model.load_state_dict(eff_ckpt["state_dict"], strict=False)
-                else:
-                    eff_model.load_state_dict(eff_ckpt, strict=False)
-            except Exception as e:
-                st.warning(f"⚠️ EfficientNet model not loaded: {e}")
-            eff_model.eval()
-
-            # Hybrid ResNet18
-            hyb_model = models.resnet18(weights=None)
-            hyb_model.fc = nn.Linear(hyb_model.fc.in_features, 4)
-            try:
-                hyb_ckpt = torch.load("hybrid_ecg_model.pth", map_location=device)
-                if isinstance(hyb_ckpt, dict) and "state_dict" in hyb_ckpt:
-                    hyb_model.load_state_dict(hyb_ckpt["state_dict"], strict=False)
-                else:
-                    hyb_model.load_state_dict(hyb_ckpt, strict=False)
-            except Exception as e:
-                st.warning(f"⚠️ Hybrid model not loaded: {e}")
-            hyb_model.eval()
-
-            return eff_model, hyb_model
-
-        # -------- LOAD MODELS --------
-        try:
-            eff_model, hyb_model = load_ecg_models()
-            st.success("✅ ECG models loaded successfully")
-        except Exception as e:
-            st.warning("⚠️ ECG models could not be loaded.")
-            st.caption(str(e))
-            st.info(
-                "🩺 ECG diagnosis disabled.\n"
-                "Heart Disease ML prediction tabs are fully functional."
-            )
-            st.stop()
-
-        # -------- IMAGE UPLOADER & TRANSFORM --------
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5,0.5,0.5], [0.5,0.5,0.5])
-        ])
-
-        uploaded_image = st.file_uploader("📤 Upload ECG Image", type=["jpg","png","jpeg"])
-
-        class_labels = ["Normal", "Myocardial Infarction", "Abnormal Heartbeat", "History of MI"]
-
-        if uploaded_image:
-            image = Image.open(uploaded_image).convert("RGB")
-            st.image(image, caption="Uploaded ECG Image", use_column_width=True)
-
-            img_tensor = transform(image).unsqueeze(0)
-
-            with torch.no_grad():
-                eff_pred = torch.argmax(eff_model(img_tensor), dim=1).item()
-                hyb_pred = torch.argmax(hyb_model(img_tensor), dim=1).item()
-
-            st.subheader("🩺 Model Predictions")
-            st.write("EfficientNet:", class_labels[eff_pred])
-            st.write("Hybrid Model:", class_labels[hyb_pred])
-
-            if eff_pred == hyb_pred:
-                st.success(f"✅ Final Diagnosis: {class_labels[eff_pred]}")
-            else:
-                st.warning("⚠️ Models disagree — manual review advised")
-                st.write(f"EfficientNet: {class_labels[eff_pred]}, Hybrid: {class_labels[hyb_pred]}")
-
+    st.header("🫀 ECG Image Diagnosis (Cloud Disabled)")
+    st.info(
+        "⚠️ ECG deep learning models cannot run on Streamlit Cloud due to Python 3.13 compatibility issues.\n\n"
+        "✅ Heart Disease ML predictions (Tabs 1-4) are fully functional.\n"
+        "📌 To enable ECG locally: install Python 3.10-3.12, PyTorch, torchvision, and place the .pth files in the project folder."
+    )
