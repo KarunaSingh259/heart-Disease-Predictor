@@ -19,6 +19,28 @@ st.set_page_config(
 st.title("❤️ Heart Disease Prediction System")
 
 # ==============================
+# SESSION STATE INIT
+# ==============================
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = "🔮 Predict"
+
+# ==============================
+# NAVIGATION
+# ==============================
+tab = st.radio(
+    "Navigation",
+    ["🔮 Predict", "📊 Prediction Result", "📂 Bulk Predict", "📄 Model Info", "🫀 ECG Image Test"],
+    horizontal=True,
+    index=[
+        "🔮 Predict",
+        "📊 Prediction Result",
+        "📂 Bulk Predict",
+        "📄 Model Info",
+        "🫀 ECG Image Test"
+    ].index(st.session_state.active_tab)
+)
+
+# ==============================
 # LOAD ML MODELS
 # ==============================
 @st.cache_resource
@@ -44,29 +66,23 @@ def load_onnx_models():
 eff_sess, hyb_sess = load_onnx_models()
 
 # ==============================
-# TABS
+# TAB 1 – PREDICT
 # ==============================
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🔮 Predict",
-    "📊 Prediction Result",
-    "📂 Bulk Predict",
-    "📄 Model Info",
-    "🫀 ECG Image Test"
-])
-
-# ==============================
-# TAB 1 – INPUT
-# ==============================
-with tab1:
+if tab == "🔮 Predict":
     st.header("🔍 Enter Patient Details")
 
     col1, col2 = st.columns(2)
+
     with col1:
         age = st.number_input("Age", 1, 120, 45)
         sex = st.selectbox("Sex", ["Male", "Female"])
-        cp = st.selectbox("Chest Pain Type", ["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"])
+        cp = st.selectbox(
+            "Chest Pain Type",
+            ["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"]
+        )
         rbp = st.number_input("Resting BP", 0, 300, 120)
         chol = st.number_input("Cholesterol", 0, 600)
+
     with col2:
         fbs = st.selectbox("Fasting Blood Sugar", ["<=120", ">120"])
         ecg = st.selectbox("Resting ECG", ["Normal", "ST-T Abnormality", "LVH"])
@@ -77,135 +93,122 @@ with tab1:
 
     input_df = pd.DataFrame({
         "Age": [age],
-        "Sex": [0 if sex=="Male" else 1],
-        "ChestPainType": [["Typical Angina","Atypical Angina","Non-Anginal Pain","Asymptomatic"].index(cp)],
+        "Sex": [0 if sex == "Male" else 1],
+        "ChestPainType": [
+            ["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"].index(cp)
+        ],
         "RestingBP": [rbp],
         "Cholesterol": [chol],
-        "FastingBS": [1 if fbs==">120" else 0],
-        "RestingECG": [["Normal","ST-T Abnormality","LVH"].index(ecg)],
+        "FastingBS": [1 if fbs == ">120" else 0],
+        "RestingECG": [["Normal", "ST-T Abnormality", "LVH"].index(ecg)],
         "MaxHR": [maxhr],
-        "ExerciseAngina": [1 if angina=="Yes" else 0],
+        "ExerciseAngina": [1 if angina == "Yes" else 0],
         "Oldpeak": [oldpeak],
-        "ST_Slope": [["Up","Flat","Down"].index(slope)]
+        "ST_Slope": [["Up", "Flat", "Down"].index(slope)]
     })
 
     if st.button("🔮 Predict Now"):
-        st.session_state["data"] = input_df
-        st.session_state["show"] = True
-        st.success("Data saved. Go to Prediction Result tab.")
+        st.session_state.data = input_df
+        st.session_state.active_tab = "📊 Prediction Result"
+        st.rerun()
+
 
 # ==============================
 # TAB 2 – PREDICTION RESULT
 # ==============================
-with tab2:
+elif tab == "📊 Prediction Result":
     st.header("📊 Prediction Result")
 
-    if "show" not in st.session_state:
-        st.info("Please predict first from Tab 1.")
+    if "data" not in st.session_state:
+        st.warning("Please enter patient details first.")
         st.stop()
 
-    input_data = st.session_state["data"]
-
+    input_data = st.session_state.data
     preds = [model.predict(input_data)[0] for model in ml_models.values()]
     risk = np.mean(preds) * 100
 
-    # Gauge
     gauge = go.Figure(go.Indicator(
-        mode="gauge+number+delta",
+        mode="gauge+number",
         value=risk,
-        title={"text":"Heart Disease Risk (%)","font":{"size":24,"color":"#1f2c56"}},
+        title={"text": "Heart Disease Risk (%)"},
         gauge={
-            "axis":{"range":[0,100]},
-            "bar":{"color":"darkred"},
-            "steps":[
-                {"range":[0,25],"color":"lightgreen"},
-                {"range":[25,50],"color":"yellow"},
-                {"range":[50,75],"color":"orange"},
-                {"range":[75,100],"color":"red"}
-            ],
-            "threshold":{
-                "line":{"color":"black","width":4},
-                "thickness":0.75,
-                "value":risk
-            }
+            "axis": {"range": [0, 100]},
+            "bar": {"color": "darkred"},
+            "steps": [
+                {"range": [0, 25], "color": "lightgreen"},
+                {"range": [25, 50], "color": "yellow"},
+                {"range": [50, 75], "color": "orange"},
+                {"range": [75, 100], "color": "red"}
+            ]
         }
     ))
+
     st.plotly_chart(gauge, use_container_width=True)
 
-    # Model-wise boxes
-    st.subheader("📋 Model-wise Prediction Results")
+    st.subheader("📋 Model-wise Results")
     for name, pred in zip(ml_models.keys(), preds):
         if pred == 1:
-            st.markdown(f"<div style='background-color:#8B0000;color:white;padding:12px;border-radius:8px;margin-bottom:6px;font-size:16px;'>❌ {name} → Heart Disease Detected</div>", unsafe_allow_html=True)
+            st.error(f"{name}: Heart Disease Detected")
         else:
-            st.markdown(f"<div style='background-color:#228B22;color:white;padding:12px;border-radius:8px;margin-bottom:6px;font-size:16px;'>✅ {name} → No Heart Disease</div>", unsafe_allow_html=True)
+            st.success(f"{name}: No Heart Disease")
 
 # ==============================
-# TAB 3 – BULK PREDICTION
+# TAB 3 – BULK PREDICT
 # ==============================
-with tab3:
+elif tab == "📂 Bulk Predict":
     st.header("📂 Bulk Prediction")
+
     file = st.file_uploader("Upload CSV", type="csv")
     if file:
         df = pd.read_csv(file)
-        if "HeartDisease" in df.columns: df = df.drop("HeartDisease", axis=1)
-        model = ml_models.get("Logistic Regression")
-        if model:
-            df["Prediction"] = model.predict(df)
-            df["Prediction"] = df["Prediction"].map({0:"No Disease",1:"Disease"})
-            st.write(df)
-        else:
-            st.error("Logistic Regression model not loaded!")
+        if "HeartDisease" in df.columns:
+            df.drop("HeartDisease", axis=1, inplace=True)
+
+        model = ml_models["Logistic Regression"]
+        df["Prediction"] = model.predict(df)
+        df["Prediction"] = df["Prediction"].map({0: "No Disease", 1: "Disease"})
+        st.dataframe(df)
 
 # ==============================
 # TAB 4 – MODEL INFO
 # ==============================
-with tab4:
+elif tab == "📄 Model Info":
     st.header("📈 Model Accuracy")
-    acc = {"Decision Tree":80.9,"Logistic Regression":85.8,"Random Forest":84.2,"SVM":84.2,"Gridrf":89.7}
-    df_acc = pd.DataFrame(acc.items(), columns=["Model","Accuracy"])
-    st.plotly_chart(px.bar(df_acc, x="Model", y="Accuracy", color="Accuracy", color_continuous_scale="Viridis"))
+
+    acc = {
+        "Decision Tree": 80.9,
+        "Logistic Regression": 85.8,
+        "Random Forest": 84.2,
+        "SVM": 84.2
+    }
+
+    df_acc = pd.DataFrame(acc.items(), columns=["Model", "Accuracy"])
+    st.plotly_chart(
+        px.bar(df_acc, x="Model", y="Accuracy", color="Accuracy",
+               color_continuous_scale="Viridis"),
+        use_container_width=True
+    )
 
 # ==============================
 # TAB 5 – ECG IMAGE TEST
 # ==============================
-with tab5:
-    st.header("🫀 ECG Image Diagnosis ")
+elif tab == "🫀 ECG Image Test":
+    st.header("🫀 ECG Image Diagnosis")
 
-    uploaded = st.file_uploader("Upload ECG Image", ["jpg","png"])
-    labels = ["Normal","Myocardial Infarction","Abnormal Heartbeat","History of MI"]
-    suggestions = {
-        "Normal":"✅ ECG is normal. Maintain a healthy lifestyle and regular check-ups.",
-        "Myocardial Infarction":"❌ Signs of a heart attack. Consult a cardiologist immediately!",
-        "Abnormal Heartbeat":"⚠️ Irregular heartbeat detected. Monitor and consult a cardiologist.",
-        "History of MI":"⚠️ Previous heart attack detected. Follow up with your doctor regularly."
-    }
+    uploaded = st.file_uploader("Upload ECG Image", ["jpg", "png"])
+    labels = ["Normal", "Myocardial Infarction", "Abnormal Heartbeat", "History of MI"]
 
     if uploaded:
-        img_original = Image.open(uploaded).convert("RGB")
-        st.image(img_original, caption="Uploaded ECG", use_column_width=True)
+        img = Image.open(uploaded).convert("RGB")
+        st.image(img, use_column_width=True)
 
-        img_resized = img_original.resize((224,224))
-        img_arr = np.array(img_resized).astype(np.float32)/255.0
-        img_arr = np.transpose(img_arr,(2,0,1))
-        img_arr = np.expand_dims(img_arr, axis=0)
+        img = img.resize((224, 224))
+        arr = np.array(img).astype(np.float32) / 255.0
+        arr = np.transpose(arr, (2, 0, 1))
+        arr = np.expand_dims(arr, axis=0)
 
-        eff_pred = eff_sess.run(None, {"input": img_arr})[0]
-        hyb_pred = hyb_sess.run(None, {"input": img_arr})[0]
+        eff_pred = eff_sess.run(None, {"input": arr})[0]
+        hyb_pred = hyb_sess.run(None, {"input": arr})[0]
 
-        eff_class = labels[np.argmax(eff_pred)]
-        hyb_class = labels[np.argmax(hyb_pred)]
-
-        # Colored boxes for predictions
-        st.subheader("📋 Model-wise Prediction Results")
-        for model_name, pred_class in zip(["EfficientNet","Hybrid Model"], [eff_class, hyb_class]):
-            if pred_class=="Normal":
-                st.markdown(f"<div style='background-color:#228B22;color:white;padding:12px;border-radius:8px;margin-bottom:6px;font-size:16px;'>✅ {model_name} → {pred_class}</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div style='background-color:#8B0000;color:white;padding:12px;border-radius:8px;margin-bottom:6px;font-size:16px;'>❌ {model_name} → {pred_class}</div>", unsafe_allow_html=True)
-
-        # Health suggestions
-        st.subheader("📝 Health Suggestions")
-        st.info(f"EfficientNet: {suggestions[eff_class]}")
-        st.info(f"Hybrid Model: {suggestions[hyb_class]}")
-
+        st.success(f"EfficientNet: {labels[np.argmax(eff_pred)]}")
+        st.success(f"Hybrid Model: {labels[np.argmax(hyb_pred)]}")
