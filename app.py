@@ -180,6 +180,7 @@ elif tab == "📄 Model Info":
         "Logistic Regression": 85.8,
         "Random Forest": 84.2,
         "SVM": 84.2
+        "Gridrf":89.5
     }
 
     df_acc = pd.DataFrame(acc.items(), columns=["Model", "Accuracy"])
@@ -212,3 +213,4 @@ elif tab == "🫀 ECG Image Test":
 
         st.success(f"EfficientNet: {labels[np.argmax(eff_pred)]}")
         st.success(f"Hybrid Model: {labels[np.argmax(hyb_pred)]}")
+
