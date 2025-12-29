@@ -179,7 +179,7 @@ elif tab == "📄 Model Info":
         "Decision Tree": 80.9,
         "Logistic Regression": 85.8,
         "Random Forest": 84.2,
-        "SVM": 84.2
+        "SVM": 84.2,
         "Gridrf":89.5
     }
 
@@ -213,4 +213,5 @@ elif tab == "🫀 ECG Image Test":
 
         st.success(f"EfficientNet: {labels[np.argmax(eff_pred)]}")
         st.success(f"Hybrid Model: {labels[np.argmax(hyb_pred)]}")
+
 
