@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-3 col-lg-2 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                        <button class="nav-link active text-start py-3 border-bottom" data-bs-toggle="pill" data-bs-target="#tab-single" type="button"><i class="fas fa-user me-2"></i> Single Prediction</button>
+                        <button class="nav-link text-start py-3 border-bottom" data-bs-toggle="pill" data-bs-target="#tab-bulk" type="button"><i class="fas fa-users me-2"></i> Bulk Prediction</button>
+                        <button class="nav-link text-start py-3 border-bottom" data-bs-toggle="pill" data-bs-target="#tab-ecg" type="button"><i class="fas fa-heartbeat me-2"></i> ECG Analysis</button>
+                        <button class="nav-link text-start py-3 border-bottom" data-bs-toggle="pill" data-bs-target="#tab-echo" type="button"><i class="fas fa-video me-2"></i> Echo Analysis</button>
+                        <button class="nav-link text-start py-3 border-bottom" data-bs-toggle="pill" data-bs-target="#tab-report" type="button"><i class="fas fa-file-pdf me-2"></i> Report Summary</button>
+                        <button class="nav-link text-start py-3 border-bottom" data-bs-toggle="pill" data-bs-target="#tab-hospitals" type="button"><i class="fas fa-hospital-alt me-2"></i> Nearby Hospitals</button>
+                        <button class="nav-link text-start py-3" data-bs-toggle="pill" data-bs-target="#tab-model" type="button"><i class="fas fa-server me-2"></i> Model Info</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9 col-lg-10">
+            <div class="tab-content bg-white p-4 rounded shadow-sm border" id="v-pills-tabContent">
+                
+                <div class="tab-pane fade show active" id="tab-single" role="tabpanel">
+                    <h3 class="text-primary mb-4">Clinical Single Prediction</h3>
+                    <form class="row g-3">
+                        <div class="col-md-4"><label class="form-label">Age</label><input type="number" class="form-control" required></div>
+                        <div class="col-md-4"><label class="form-label">Sex</label><select class="form-select"><option>M</option><option>F</option></select></div>
+                        <div class="col-md-4"><label class="form-label">Chest Pain Type</label><select class="form-select"><option>ATA</option><option>NAP</option><option>ASY</option><option>TA</option></select></div>
+                        <div class="col-md-4"><label class="form-label">Resting BP</label><input type="number" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Cholesterol</label><input type="number" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Fasting BS</label><select class="form-select"><option>0</option><option>1</option></select></div>
+                        <div class="col-md-4"><label class="form-label">Resting ECG</label><select class="form-select"><option>Normal</option><option>ST</option><option>LVH</option></select></div>
+                        <div class="col-md-4"><label class="form-label">Max HR</label><input type="number" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Exercise Angina</label><select class="form-select"><option>Y</option><option>N</option></select></div>
+                        <div class="col-md-4"><label class="form-label">Oldpeak</label><input type="number" step="0.1" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">ST Slope</label><select class="form-select"><option>Up</option><option>Flat</option><option>Down</option></select></div>
+                        <div class="col-12 mt-4"><button type="button" class="btn btn-primary px-5">Predict Risk</button></div>
+                    </form>
+
+                    <div class="mt-5 border-top pt-4">
+                        <h4>Result</h4>
+                        <div class="alert alert-danger d-flex justify-content-between align-items-center">
+                            <span><strong>Prediction:</strong> Heart Disease Detected</span>
+                            <span class="badge bg-danger fs-6">Risk: High</span>
+                        </div>
+                        <p class="text-muted">Confidence: 89.7% (Grid RF)</p>
+                        
+                        <h5 class="mt-4">Explanation & Recommendations</h5>
+                        <ul class="list-group mb-3">
+                            <li class="list-group-item"><i class="fas fa-exclamation-triangle text-warning me-2"></i> Heart disease risk is high because cholesterol level is elevated.</li>
+                            <li class="list-group-item"><i class="fas fa-info-circle text-primary me-2"></i> Reduce cholesterol-rich food and monitor blood pressure.</li>
+                            <li class="list-group-item"><i class="fas fa-user-md text-danger me-2"></i> <strong>Please consult a cardiologist.</strong></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-bulk" role="tabpanel">
+                    <h3 class="text-primary mb-4">Bulk CSV Prediction</h3>
+                    <div class="card bg-light border-dashed mb-4">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-secondary mb-3"></i>
+                            <h5>Drag & Drop CSV File here</h5>
+                            <p class="text-muted">or click to browse</p>
+                            <input type="file" class="form-control w-50 mx-auto" accept=".csv">
+                            <div class="mt-3">
+                                <button class="btn btn-outline-primary btn-sm me-2">Download Sample CSV</button>
+                                <button class="btn btn-primary btn-sm">Upload & Analyze</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning"><i class="fas fa-exclamation-circle me-2"></i> Patients predicted as high risk should consult a heart specialist as soon as possible.</div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-ecg" role="tabpanel">
+                    <h3 class="text-primary mb-4">ECG Image Analysis</h3>
+                    <input type="file" class="form-control mb-3" accept="image/*">
+                    <button class="btn btn-primary mb-4">Analyze ECG</button>
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white">Results</div>
+                        <div class="card-body">
+                            <h5 class="text-danger">Predicted Class: Myocardial Infarction</h5>
+                            <p class="text-muted">Confidence: 94.2%</p>
+                            <p><strong>Clinical Note:</strong> Possible myocardial infarction detected. Immediate medical consultation is advised.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-echo" role="tabpanel">
+                    <h3 class="text-primary mb-4">Echocardiogram Analysis</h3>
+                    <input type="file" class="form-control mb-3" accept="video/mp4, image/*">
+                    <button class="btn btn-primary mb-4">Analyze Echo</button>
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-check-circle me-2"></i>Normal</h5>
+                        <p class="mb-0">Echo findings appear normal. Maintain regular health checkups.</p>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-report" role="tabpanel">
+                    <h3 class="text-primary mb-4">Medical Report Summary</h3>
+                    <input type="file" class="form-control mb-3" accept=".pdf, .txt">
+                    <button class="btn btn-primary mb-4">Extract & Summarize</button>
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Combined Multimodal Overview</h5>
+                            <p class="card-text text-danger fw-bold">“Moderate to high cardiac risk detected based on combined clinical, ECG, and echo findings.”</p>
+                            <hr>
+                            <h6>Suggested Next Steps:</h6>
+                            <ul>
+                                <li>Schedule a follow-up stress test.</li>
+                                <li>Consultation required for medication review.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-hospitals" role="tabpanel">
+                    <h3 class="text-primary mb-4">Nearby Heart Hospitals</h3>
+                    <div class="alert alert-danger"><i class="fas fa-ambulance me-2"></i> For severe chest pain, breathing difficulty, or fainting, seek emergency medical care immediately!</div>
+                    <form class="row g-3 mb-4">
+                        <div class="col-md-5"><input type="text" class="form-control" placeholder="Enter State"></div>
+                        <div class="col-md-5"><input type="text" class="form-control" placeholder="Enter Pincode"></div>
+                        <div class="col-md-2"><button class="btn btn-primary w-100">Search</button></div>
+                    </form>
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1 text-primary">Apollo Cardiac Center</h5>
+                                <p class="mb-0 text-muted"><i class="fas fa-map-marker-alt me-2"></i>123 Health Ave, Delhi, 110001</p>
+                                <p class="mb-0 text-muted"><i class="fas fa-phone me-2"></i>+91 98765 43210</p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success mb-2">2.4 km away</span><br>
+                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-directions me-1"></i> Map</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-model" role="tabpanel">
+                    <h3 class="text-primary mb-4">AI Model Information Dashboard</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white fw-bold">Clinical Data Models (Tabs 1 & 2)</div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between"><span>Grid RF (Best)</span><span>89.7%</span></div>
+                                        <div class="progress"><div class="progress-bar bg-success" style="width: 89.7%"></div></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between"><span>Logistic Regression</span><span>85.8%</span></div>
+                                        <div class="progress"><div class="progress-bar bg-primary" style="width: 85.8%"></div></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between"><span>Random Forest / SVM</span><span>84.2%</span></div>
+                                        <div class="progress"><div class="progress-bar bg-info" style="width: 84.2%"></div></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between"><span>Decision Tree</span><span>80.9%</span></div>
+                                        <div class="progress"><div class="progress-bar bg-secondary" style="width: 80.9%"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white fw-bold">Image & Video Models</div>
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-3">ECG (Tab 3)</h6>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between"><span>Hybrid Model</span><span>82.0%</span></div>
+                                        <div class="progress"><div class="progress-bar bg-success" style="width: 82.0%"></div></div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <div class="d-flex justify-content-between"><span>EfficientNet</span><span>76.0%</span></div>
+                                        <div class="progress"><div class="progress-bar bg-secondary" style="width: 76.0%"></div></div>
+                                    </div>
+
+                                    <h6 class="text-muted mb-3">Echo (Tab 4)</h6>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between"><span>CNN + LSTM</span><span>80.0%</span></div>
+                                        <div class="progress"><div class="progress-bar bg-primary" style="width: 80.0%"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <canvas id="modelChart" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize Chart.js for Tab 7
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('modelChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Grid RF', 'Logistic Reg.', 'RF / SVM', 'Decision Tree', 'Hybrid (ECG)', 'EfficientNet', 'CNN+LSTM (Echo)'],
+                datasets: [{
+                    label: 'Model Accuracy (%)',
+                    data: [89.7, 85.8, 84.2, 80.9, 82.0, 76.0, 80.0],
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.7)', // Green for best
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(25, 135, 84, 0.7)', // Green for best ECG
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(13, 110, 253, 0.7)'
+                    ],
+                    borderColor: 'rgba(255, 255, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: false, min: 70, max: 100 }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="custom-card">
+            <div class="card-header-custom d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-chart-line me-2"></i> AI Model Architecture & Performance</span>
+            </div>
+            <div class="card-body-custom">
+                <p class="text-muted mb-0">Cardio AI utilizes a diverse ensemble of machine learning and deep learning algorithms to process multimodal data. Below is the performance breakdown of the models powering our predictions.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Clinical Data Models -->
+    <div class="col-lg-6 mb-4">
+        <div class="custom-card h-100">
+            <div class="card-header-custom bg-light">
+                <i class="fa-solid fa-clipboard-list me-2"></i> Clinical Data Models (Tab 1 & 2)
+            </div>
+            <div class="card-body-custom">
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-bold">Grid Random Forest (Best)</span>
+                        <span class="text-success fw-bold">89.7%</span>
+                    </div>
+                    <div class="progress" style="height: 12px;">
+                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" style="width: 89.7%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Logistic Regression</span>
+                        <span class="text-primary fw-bold">85.8%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-primary" style="width: 85.8%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Random Forest</span>
+                        <span class="text-primary fw-bold">84.2%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-primary" style="width: 84.2%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Support Vector Machine (SVM)</span>
+                        <span class="text-primary fw-bold">84.2%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-primary" style="width: 84.2%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Decision Tree</span>
+                        <span class="text-primary fw-bold">80.9%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-primary" style="width: 80.9%"></div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="col-lg-6 mb-4">
+        <div class="custom-card h-100">
+            <div class="card-header-custom bg-light">
+                <i class="fa-solid fa-chart-bar me-2"></i> Clinical Model Comparison
+            </div>
+            <div class="card-body-custom">
+                <canvas id="clinicalModelChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- ECG Models -->
+    <div class="col-md-6 mb-4">
+        <div class="custom-card h-100">
+            <div class="card-header-custom bg-light">
+                <i class="fa-solid fa-heart-circle-bolt me-2"></i> ECG Image Models (Tab 3)
+            </div>
+            <div class="card-body-custom">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-bold">Hybrid Model (CNN + Attention)</span>
+                        <span class="text-success fw-bold">82.0%</span>
+                    </div>
+                    <div class="progress" style="height: 12px;">
+                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" style="width: 82.0%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>EfficientNet (Baseline)</span>
+                        <span class="text-primary fw-bold">76.0%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-primary" style="width: 76.0%"></div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 alert alert-info py-2 small">
+                    <i class="fa-solid fa-info-circle me-1"></i> The Hybrid model leverages spatial attention mechanisms to focus on crucial waveforms in the ECG lead data.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Echo Models -->
+    <div class="col-md-6 mb-4">
+        <div class="custom-card h-100">
+            <div class="card-header-custom bg-light">
+                <i class="fa-solid fa-video me-2"></i> Echocardiogram Models (Tab 4)
+            </div>
+            <div class="card-body-custom">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-bold">R2Plus1D-18 (3D CNN)</span>
+                        <span class="text-success fw-bold">84.3%</span>
+                    </div>
+                    <div class="progress" style="height: 12px;">
+                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" style="width: 84.3%"></div>
+                    </div>
+                </div>
+
+                <p class="text-muted small mt-4">
+                    The R2Plus1D-18 architecture is a state-of-the-art 3D Convolutional Neural Network designed for video classification. It decomposes 3D convolutions into separate spatial (2D) and temporal (1D) components, allowing for more efficient learning of spatiotemporal features in echocardiogram sequences.
+                </p>
+                
+                <div class="d-flex gap-2 mt-3">
+                    <span class="badge bg-secondary">3D Convolutions</span>
+                    <span class="badge bg-secondary">Spatiotemporal Features</span>
+                    <span class="badge bg-secondary">Video Classification</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('clinicalModelChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Grid RF', 'Log. Reg.', 'Random Forest', 'SVM', 'Decision Tree'],
+                datasets: [{
+                    label: 'Accuracy (%)',
+                    data: [89.7, 85.8, 84.2, 84.2, 80.9],
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.7)',  // Success green for best
+                        'rgba(13, 110, 253, 0.5)', // Primary blue
+                        'rgba(13, 110, 253, 0.5)',
+                        'rgba(13, 110, 253, 0.5)',
+                        'rgba(13, 110, 253, 0.5)'
+                    ],
+                    borderColor: [
+                        'rgba(25, 135, 84, 1)',
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(13, 110, 253, 1)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 70, // Start y-axis at 70 to highlight differences
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Accuracy %'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

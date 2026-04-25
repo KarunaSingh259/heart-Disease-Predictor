@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <!-- Form Section -->
+    <div class="col-lg-7">
+        <div class="custom-card">
+            <div class="card-header-custom d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-clipboard-user me-2"></i> Patient Clinical Data</span>
+                <span class="badge bg-primary rounded-pill">11 Parameters</span>
+            </div>
+            <div class="card-body-custom">
+                <form id="single-prediction-form" class="needs-loading">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Age</label>
+                            <input type="number" class="form-control" name="age" placeholder="e.g., 45" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Sex</label>
+                            <select class="form-select" name="sex" required>
+                                <option value="" selected disabled>Select...</option>
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Chest Pain Type</label>
+                            <select class="form-select" name="chest_pain" required>
+                                <option value="" selected disabled>Select...</option>
+                                <option value="ATA">Atypical Angina (ATA) &rarr; Chest pain but not typical heart pattern</option>
+                                <option value="NAP">Non-Anginal Pain (NAP) &rarr; Pain not related to heart</option>
+                                <option value="ASY">Asymptomatic (ASY) &rarr; No chest pain</option>
+                                <option value="TA">Typical Angina (TA) &rarr; Chest pain due to heart problem (serious)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Resting Blood Pressure (mm Hg)</label>
+                            <input type="number" class="form-control" name="resting_bp" placeholder="e.g., 120" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Cholesterol (mg/dl)</label>
+                            <input type="number" class="form-control" name="cholesterol" placeholder="e.g., 200" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fasting Blood Sugar > 120 mg/dl</label>
+                            <select class="form-select" name="fasting_bs" required>
+                                <option value="" selected disabled>Select...</option>
+                                <option value="1">Yes (1)</option>
+                                <option value="0">No (0)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Resting ECG Results</label>
+                            <select class="form-select" name="resting_ecg" required>
+                                <option value="" selected disabled>Select...</option>
+                                <option value="Normal">Normal &rarr; Healthy</option>
+                                <option value="ST">ST-T Abnormality &rarr; Possible heart issue</option>
+                                <option value="LVH">LVH &rarr; Thickened heart muscle</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Maximum Heart Rate</label>
+                            <input type="number" class="form-control" name="max_hr" placeholder="e.g., 150" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Chest pain during exercise <small class="text-muted">(Exercise Angina)</small></label>
+                            <select class="form-select" name="exercise_angina" required>
+                                <option value="" selected disabled>Select...</option>
+                                <option value="Y">Yes</option>
+                                <option value="N">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Oldpeak (ST depression)</label>
+                            <input type="number" step="0.1" class="form-control" name="oldpeak" placeholder="e.g., 1.5" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">ST Slope <small class="text-muted">(Pattern of heart signal during stress test)</small></label>
+                            <select class="form-select" name="st_slope" required>
+                                <option value="" selected disabled>Select...</option>
+                                <option value="Up">Up &rarr; Normal</option>
+                                <option value="Flat">Flat &rarr; Risky</option>
+                                <option value="Down">Down &rarr; Serious heart issue</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid mt-4">
+                        <button type="button" class="btn btn-primary btn-custom" onclick="submitSinglePrediction()"><i class="fa-solid fa-microchip me-2"></i> Predict Risk</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Output Section (Hidden by default, shown via JS for demo) -->
+    <div class="col-lg-5" id="result-section" style="display: none;">
+        <div class="custom-card mb-4">
+            <div class="card-header-custom bg-light">
+                <i class="fa-solid fa-chart-pie me-2"></i> Prediction Result
+            </div>
+            <div class="card-body-custom text-center py-5">
+                <h2 class="mb-3" id="prediction-text">Heart Disease Detected</h2>
+                <div class="risk-badge risk-high mb-4" id="risk-badge">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i> <span id="risk-level-display">High Risk</span>
+                </div>
+                
+                <div class="d-flex justify-content-between text-muted small mt-4 px-3">
+                    <span>Confidence Score</span>
+                    <span class="fw-bold text-dark" id="confidence-display">89.7%</span>
+                </div>
+                <div class="progress mx-3" style="height: 8px;">
+                    <div class="progress-bar bg-danger" id="confidence-bar" role="progressbar" style="width: 89.7%" aria-valuenow="89.7" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="custom-card">
+            <div class="card-header-custom">
+                <i class="fa-solid fa-stethoscope me-2"></i> Recommendations
+            </div>
+            <div class="card-body-custom">
+                <p class="text-muted mb-4" id="explanation-text">
+                    "Heart disease risk is high because cholesterol level is elevated and multiple clinical parameters suggest a higher probability of heart disease."
+                </p>
+                
+                <h6 class="fw-bold mb-3">Suggested Actions:</h6>
+                <ul class="list-group list-group-flush border-0 small">
+                    <li class="list-group-item bg-transparent border-0 py-1"><i class="fa-solid fa-angle-right text-primary me-2"></i> Reduce cholesterol-rich food</li>
+                    <li class="list-group-item bg-transparent border-0 py-1"><i class="fa-solid fa-angle-right text-primary me-2"></i> Monitor blood pressure regularly</li>
+                    <li class="list-group-item bg-transparent border-0 py-1"><i class="fa-solid fa-angle-right text-primary me-2"></i> Maintain physical activity</li>
+                    <li class="list-group-item bg-transparent border-0 py-1 text-danger fw-bold"><i class="fa-solid fa-user-doctor me-2"></i> Consult a cardiologist</li>
+                </ul>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('hospitals') }}" class="btn btn-outline-primary btn-sm w-100 mb-2"><i class="fa-solid fa-location-dot me-1"></i> Find Nearby Hospitals</a>
+                    <a href="{{ url_for('report_summary') }}" class="btn btn-primary btn-sm w-100"><i class="fa-solid fa-file-signature me-1"></i> View Combined Report Summary</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function submitSinglePrediction() {
+        const form = document.getElementById('single-prediction-form');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        const loading = document.getElementById('loading-overlay');
+        loading.classList.add('active');
+        
+        fetch('{{ url_for("single_prediction") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            loading.classList.remove('active');
+            
+            if (result.error) {
+                alert('Error: ' + result.error);
+                return;
+            }
+            
+            const riskDisplay = document.getElementById('risk-level-display');
+            const confidenceDisplay = document.getElementById('confidence-display');
+            const confidenceBar = document.getElementById('confidence-bar');
+            const explanationText = document.getElementById('explanation-text');
+            const riskBadge = document.getElementById('risk-badge');
+            const predictionText = document.getElementById('prediction-text');
+            
+            riskDisplay.textContent = result.risk_level;
+            confidenceDisplay.textContent = result.confidence + '%';
+            confidenceBar.style.width = result.confidence + '%';
+            
+            if (result.risk_level === 'High Risk') {
+                predictionText.textContent = 'Heart Disease Detected';
+                riskBadge.className = 'risk-badge risk-high mb-4';
+                confidenceBar.className = 'progress-bar bg-danger';
+                explanationText.textContent = "Heart disease risk is high based on the clinical parameters provided. Please seek medical consultation.";
+            } else {
+                predictionText.textContent = 'No Heart Disease Detected';
+                riskBadge.className = 'risk-badge risk-low mb-4 bg-success text-white border-success';
+                confidenceBar.className = 'progress-bar bg-success';
+                explanationText.textContent = "Heart disease risk is low based on the clinical parameters provided. Maintain a healthy lifestyle.";
+            }
+
+            document.getElementById('result-section').style.display = 'block';
+            
+            if(window.innerWidth < 992) {
+                document.getElementById('result-section').scrollIntoView({behavior: 'smooth'});
+            }
+        })
+        .catch(error => {
+            loading.classList.remove('active');
+            alert('An error occurred during prediction.');
+            console.error(error);
+        });
+    }
+</script>
+{% endblock %}
