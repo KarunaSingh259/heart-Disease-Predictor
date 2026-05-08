@@ -122,22 +122,29 @@
 
         <div class="custom-card">
             <div class="card-header-custom">
-                <i class="fa-solid fa-stethoscope me-2"></i> Recommendations
+                <i class="fa-solid fa-stethoscope me-2"></i> Recommendations & Explanations
             </div>
             <div class="card-body-custom">
                 <p class="text-muted mb-4" id="explanation-text">
                     "Heart disease risk is high because cholesterol level is elevated and multiple clinical parameters suggest a higher probability of heart disease."
                 </p>
                 
-                <h6 class="fw-bold mb-3">Suggested Actions:</h6>
-                <ul class="list-group list-group-flush border-0 small">
-                    <li class="list-group-item bg-transparent border-0 py-1"><i class="fa-solid fa-angle-right text-primary me-2"></i> Reduce cholesterol-rich food</li>
-                    <li class="list-group-item bg-transparent border-0 py-1"><i class="fa-solid fa-angle-right text-primary me-2"></i> Monitor blood pressure regularly</li>
-                    <li class="list-group-item bg-transparent border-0 py-1"><i class="fa-solid fa-angle-right text-primary me-2"></i> Maintain physical activity</li>
-                    <li class="list-group-item bg-transparent border-0 py-1 text-danger fw-bold"><i class="fa-solid fa-user-doctor me-2"></i> Consult a cardiologist</li>
-                </ul>
+                <div class="row text-start">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-clipboard-list text-primary me-2"></i> Risk Factors:</h6>
+                        <ul class="list-group list-group-flush border-0 small" id="reasons-list">
+                            <!-- Dynamic reasons go here -->
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-lightbulb text-warning me-2"></i> Suggested Actions:</h6>
+                        <ul class="list-group list-group-flush border-0 small" id="suggestions-list">
+                            <!-- Dynamic suggestions go here -->
+                        </ul>
+                    </div>
+                </div>
                 
-                <div class="mt-4">
+                <div class="mt-4 pt-3 border-top">
                     <a href="{{ url_for('hospitals') }}" class="btn btn-outline-primary btn-sm w-100 mb-2"><i class="fa-solid fa-location-dot me-1"></i> Find Nearby Hospitals</a>
                     <a href="{{ url_for('report_summary') }}" class="btn btn-primary btn-sm w-100"><i class="fa-solid fa-file-signature me-1"></i> View Combined Report Summary</a>
                 </div>
@@ -185,6 +192,7 @@
             const riskBadge = document.getElementById('risk-badge');
             const predictionText = document.getElementById('prediction-text');
             
+            // Render ML Prediction Risk Level
             riskDisplay.textContent = result.risk_level;
             confidenceDisplay.textContent = result.confidence + '%';
             confidenceBar.style.width = result.confidence + '%';
@@ -193,12 +201,38 @@
                 predictionText.textContent = 'Heart Disease Detected';
                 riskBadge.className = 'risk-badge risk-high mb-4';
                 confidenceBar.className = 'progress-bar bg-danger';
-                explanationText.textContent = "Heart disease risk is high based on the clinical parameters provided. Please seek medical consultation.";
+                explanationText.textContent = "Based on the machine learning model, there is a high probability of heart disease. Below is a clinical breakdown based on medical rules.";
             } else {
                 predictionText.textContent = 'No Heart Disease Detected';
                 riskBadge.className = 'risk-badge risk-low mb-4 bg-success text-white border-success';
                 confidenceBar.className = 'progress-bar bg-success';
-                explanationText.textContent = "Heart disease risk is low based on the clinical parameters provided. Maintain a healthy lifestyle.";
+                explanationText.textContent = "Based on the machine learning model, the risk of heart disease is low. Below is a clinical breakdown based on medical rules.";
+            }
+
+            // Render Rule-Based Reasons
+            const reasonsList = document.getElementById('reasons-list');
+            reasonsList.innerHTML = '';
+            if (result.reasons && result.reasons.length > 0) {
+                result.reasons.forEach(reason => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item bg-transparent border-0 py-1';
+                    li.innerHTML = `<i class="fa-solid fa-angle-right text-primary me-2"></i> ${reason}`;
+                    reasonsList.appendChild(li);
+                });
+            }
+
+            // Render Rule-Based Suggestions
+            const suggestionsList = document.getElementById('suggestions-list');
+            suggestionsList.innerHTML = '';
+            if (result.suggestions && result.suggestions.length > 0) {
+                result.suggestions.forEach(suggestion => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item bg-transparent border-0 py-1';
+                    // We parse markdown ** bolding safely (basic regex)
+                    let formattedSuggestion = suggestion.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    li.innerHTML = `<i class="fa-solid fa-angle-right text-warning me-2"></i> ${formattedSuggestion}`;
+                    suggestionsList.appendChild(li);
+                });
             }
 
             document.getElementById('result-section').style.display = 'block';
