@@ -171,12 +171,17 @@ def single_prediction():
             chest = chest_map.get(data.get('chest_pain', 'ASY'), 0)
             bp = float(data.get('resting_bp', 0))
             chol = float(data.get('cholesterol', 0))
-            fasting = float(data.get('fasting_bs', 0))
+            fbs_val = data.get('fasting_bs', '0')
+            fasting = float(fbs_val)
             ecg = ecg_map.get(data.get('resting_ecg', 'Normal'), 1)
             hr = float(data.get('max_hr', 0))
-            angina = angina_map.get(data.get('exercise_angina', 'N'), 0)
+            angina_val = data.get('exercise_angina', 'N')
+            angina = angina_map.get(angina_val, 0)
             oldpeak = float(data.get('oldpeak', 0.0))
-            slope = slope_map.get(data.get('st_slope', 'Flat'), 1)
+            slope_val = data.get('st_slope', 'Flat')
+            slope = slope_map.get(slope_val, 1)
+            chest_val = data.get('chest_pain', 'ASY')
+            chest = chest_map.get(chest_val, 0)
             
             features = np.array([[age, sex, chest, bp, chol, fasting, ecg, hr, angina, oldpeak, slope]])
             
@@ -185,15 +190,87 @@ def single_prediction():
             
             risk_level = "High Risk" if prediction == 1 else "Low Risk"
             
+            # --- Rule-Based Risk Scoring System ---
+            risk_score = 0
+            reasons = []
+            suggestions = []
+            
+            if age >= 55:
+                risk_score += 1
+                reasons.append("Age 55 or older")
+                suggestions.append("🩺 **Age:** Regular checkups are highly recommended as age increases cardiovascular risk.")
+                
+            if bp > 140:
+                risk_score += 2
+                reasons.append(f"High Resting Blood Pressure ({bp} mmHg)")
+                suggestions.append("🧂 **High BP:** Adopt a low-salt diet, exercise regularly, and consult a doctor for potential medication.")
+            elif bp > 130:
+                risk_score += 1
+                reasons.append(f"Elevated Resting Blood Pressure ({bp} mmHg)")
+                suggestions.append("🧂 **Elevated BP:** Consider lifestyle changes like reducing sodium intake and managing stress.")
+
+            if chol > 240:
+                risk_score += 2
+                reasons.append(f"High Cholesterol ({chol} mg/dL)")
+                suggestions.append("🍔 **High Cholesterol:** Avoid oily/fried food, increase dietary fiber, and maintain a balanced diet.")
+            elif chol > 200:
+                risk_score += 1
+                reasons.append(f"Borderline High Cholesterol ({chol} mg/dL)")
+                suggestions.append("🍔 **Elevated Cholesterol:** Watch your diet and limit saturated fats.")
+
+            if str(fbs_val) == "1":
+                risk_score += 1
+                reasons.append("High Fasting Blood Sugar (>120 mg/dL)")
+                suggestions.append("🍭 **High Sugar:** Control your diet, limit sugar intake, and monitor your blood glucose levels.")
+
+            if angina_val == "Y":
+                risk_score += 2
+                reasons.append("Presence of Exercise-Induced Angina")
+                suggestions.append("🫀 **Angina:** Experiencing chest pain during exercise is a strong risk factor. Consult a cardiologist promptly.")
+
+            if oldpeak > 2.0:
+                risk_score += 2
+                reasons.append(f"High Oldpeak ST Depression ({oldpeak})")
+                suggestions.append("📉 **ECG Finding (Oldpeak):** Significant stress on the heart during activity. Further cardiac evaluation is recommended.")
+
+            if slope_val in ["Flat", "Down"]:
+                risk_score += 1
+                reasons.append(f"Abnormal ST Slope ({slope_val})")
+                suggestions.append("〰️ **ECG Finding (ST Slope):** Indicates potential reduced blood flow to the heart post-exercise.")
+
+            if chest_val == "ASY":
+                risk_score += 1
+                reasons.append("Chest Pain Type: Asymptomatic")
+                suggestions.append("⚠️ **Chest Pain:** Asymptomatic presentation can be linked to silent ischemia. Routine screening is vital.")
+
+            if risk_score >= 6:
+                rule_risk = "High Risk"
+            elif risk_score >= 3:
+                rule_risk = "Moderate Risk"
+            else:
+                rule_risk = "Low Risk"
+                
+            if not reasons:
+                reasons.append("No significant risk factors identified based on the provided inputs.")
+                suggestions.append("✅ Keep up the healthy lifestyle!")
+            
             session['clinical_pred'] = {
                 'risk_level': risk_level,
-                'confidence': round(probability, 1)
+                'confidence': round(probability, 1),
+                'rule_risk': rule_risk,
+                'risk_score': risk_score,
+                'reasons': reasons,
+                'suggestions': suggestions
             }
             
             return jsonify({
                 'success': True,
                 'risk_level': risk_level,
-                'confidence': round(probability, 1)
+                'confidence': round(probability, 1),
+                'rule_risk': rule_risk,
+                'risk_score': risk_score,
+                'reasons': reasons,
+                'suggestions': suggestions
             })
             
         except Exception as e:
@@ -639,3 +716,4 @@ def model_info():
 
 if __name__ == '__main__':
     app.run(debug=True)
+    
